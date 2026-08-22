@@ -12,8 +12,8 @@
 #include <wlr/xwayland.h>
 #endif
 
-#include "server.h"
 #include "poc_layout.h"
+#include "server.h"
 
 enum cg_view_type {
 	CAGE_XDG_SHELL_VIEW,

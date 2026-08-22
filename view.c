@@ -82,8 +82,7 @@ static enum cg_poc_surface_role
 view_detect_poc_role(struct cg_view *view)
 {
 	char *title = view_get_title(view);
-	enum cg_poc_surface_role role =
-		cg_poc_layout_classify_title(view->server->poc_browser_width > 0, title);
+	enum cg_poc_surface_role role = cg_poc_layout_classify_title(view->server->poc_browser_width > 0, title);
 
 	free(title);
 	return role;
