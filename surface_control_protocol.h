@@ -43,12 +43,12 @@ struct cg_surface_control_message {
 	};
 };
 
-enum cg_surface_control_parse_result cg_surface_control_parse(
-	const uint8_t *bytes, size_t size, struct cg_surface_control_message *message_out);
+enum cg_surface_control_parse_result cg_surface_control_parse(const uint8_t *bytes, size_t size,
+							      struct cg_surface_control_message *message_out);
 bool cg_surface_control_encode_register(const struct cg_surface_registration_request *request, uint8_t *bytes_out,
-	size_t capacity, size_t *size_out);
-bool cg_surface_control_encode_unregister(
-	const struct cg_surface_control_unregister *request, uint8_t *bytes_out, size_t capacity, size_t *size_out);
+					size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_unregister(const struct cg_surface_control_unregister *request, uint8_t *bytes_out,
+					  size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_reset(uint8_t *bytes_out, size_t capacity, size_t *size_out);
 
 #endif

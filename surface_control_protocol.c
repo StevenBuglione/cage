@@ -87,7 +87,8 @@ cg_surface_control_parse(const uint8_t *bytes, size_t size, struct cg_surface_co
 {
 	uint16_t declared_size;
 
-	if (!bytes || !message_out || size < CG_SURFACE_CONTROL_HEADER_SIZE || size > CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE) {
+	if (!bytes || !message_out || size < CG_SURFACE_CONTROL_HEADER_SIZE ||
+	    size > CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE) {
 		return CG_SURFACE_CONTROL_PARSE_INVALID_SIZE;
 	}
 	if (memcmp(bytes, protocol_magic, sizeof(protocol_magic)) != 0) {
@@ -150,9 +151,10 @@ cg_surface_control_parse(const uint8_t *bytes, size_t size, struct cg_surface_co
 
 bool
 cg_surface_control_encode_register(const struct cg_surface_registration_request *request, uint8_t *bytes_out,
-	size_t capacity, size_t *size_out)
+				   size_t capacity, size_t *size_out)
 {
-	if (!registration_fields_valid(request) || !bytes_out || capacity < CG_SURFACE_CONTROL_REGISTER_SIZE || !size_out) {
+	if (!registration_fields_valid(request) || !bytes_out || capacity < CG_SURFACE_CONTROL_REGISTER_SIZE ||
+	    !size_out) {
 		return false;
 	}
 	memset(bytes_out, 0, CG_SURFACE_CONTROL_REGISTER_SIZE);
@@ -170,7 +172,7 @@ cg_surface_control_encode_register(const struct cg_surface_registration_request 
 
 bool
 cg_surface_control_encode_unregister(const struct cg_surface_control_unregister *request, uint8_t *bytes_out,
-	size_t capacity, size_t *size_out)
+				     size_t capacity, size_t *size_out)
 {
 	if (!request || request->scene_id == 0 || request->surface_id == 0 || !bytes_out ||
 	    capacity < CG_SURFACE_CONTROL_UNREGISTER_SIZE || !size_out) {
