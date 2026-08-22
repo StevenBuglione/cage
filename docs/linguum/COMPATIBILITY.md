@@ -24,3 +24,20 @@ The build used the exact clean source worktree and the appliance's pinned
 nixpkgs dependency graph. Upstream Meson `werror=true` remained enabled. No
 source patch, current-main substitution, interactive display, or human action
 was involved.
+
+## M1-WP02 checkpoint 1 — layout characterization
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `864fc3c354b4203cc402ebdb6990b53ed5c976e1` | PASS |
+| legacy POC layout test | Meson test, 1 case suite | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/kmr8lpy4wscn4szg6f8kfqv26n5p7gwc-cage-0.3.0
+binary SHA-256: 42bcf73a490927024ecf67af24957dceef7c1d4a02c785832ee2777784fe3d6f
+```
