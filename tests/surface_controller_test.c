@@ -129,6 +129,7 @@ main(void)
 	assert(memcmp(bytes, "LSC1\x01\x81\x00\x28", 8) == 0);
 	assert(cg_surface_controller_now(&controller) == now);
 
+	assert(cg_surface_control_encode_register(&register_request, bytes, sizeof(bytes), &size));
 	send_bytes(client, bytes, size);
 	dispatch(event_loop);
 	assert(controller.rejected_messages == 1);
