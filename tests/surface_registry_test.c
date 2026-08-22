@@ -79,8 +79,10 @@ test_invalid_and_duplicate_registration(void)
 	assert(cg_surface_registry_register(&registry, &invalid, 0) == CG_SURFACE_REGISTRY_INVALID);
 	invalid.association_timeout_ms = CG_SURFACE_ASSOCIATION_TIMEOUT_MAX_MS + 1;
 	assert(cg_surface_registry_register(&registry, &invalid, 0) == CG_SURFACE_REGISTRY_INVALID);
+	invalid = request_for(102, 3, CG_SURFACE_KIND_FIREFOX_VIEW);
+	assert(cg_surface_registry_register(&registry, &invalid, UINT64_MAX) == CG_SURFACE_REGISTRY_INVALID);
 	assert(registry.registrations == 1);
-	assert(registry.rejected_requests == 7);
+	assert(registry.rejected_requests == 8);
 }
 
 static void
