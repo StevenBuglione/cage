@@ -192,6 +192,25 @@ test_reset_zeroes_tokens_and_state(void)
 }
 
 static void
+test_hundred_registration_lifecycles(void)
+{
+	for (uint64_t cycle = 1; cycle <= 100; cycle++) {
+		struct cg_surface_registry registry;
+		struct cg_surface_registration_request request = request_for(100, cycle, CG_SURFACE_KIND_FIREFOX_VIEW);
+		struct cg_surface_identity identity;
+		uintptr_t surface = (uintptr_t) (0x1000 + cycle);
+
+		cg_surface_registry_init(&registry);
+		assert(cg_surface_registry_register(&registry, &request, cycle) == CG_SURFACE_REGISTRY_OK);
+		assert(cg_surface_registry_associate(&registry, &request.token, surface, cycle + 1, &identity) ==
+		       CG_SURFACE_REGISTRY_OK);
+		assert(identity.surface_id == 100);
+		assert(cg_surface_registry_retire(&registry, 7, 100) == CG_SURFACE_REGISTRY_OK);
+		assert(cg_surface_registry_find(&registry, 7, 100)->state == CG_SURFACE_REGISTRATION_RETIRED);
+	}
+}
+
+static void
 test_token_hint_round_trip(void)
 {
 	struct cg_surface_token token = token_for(0x123456789abcdef0ULL);
@@ -227,6 +246,7 @@ main(void)
 	test_duplicate_surface_and_capacity();
 	test_scene_retirement();
 	test_reset_zeroes_tokens_and_state();
+	test_hundred_registration_lifecycles();
 	test_token_hint_round_trip();
 	return 0;
 }
