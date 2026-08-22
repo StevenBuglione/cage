@@ -129,9 +129,9 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 	bool registry_required = controller->accepting;
 	bool new_association = registry_required && view->surface_policy.state == CG_SURFACE_VIEW_UNMANAGED;
 
-	if (!cg_surface_view_policy_associate(&view->surface_policy, registry_required,
-					      &view->server->surface_registry, view_get_app_id(view),
-					      (uintptr_t) surface, cg_surface_controller_now(controller))) {
+	if (!cg_surface_view_policy_associate(&view->surface_policy, registry_required, &view->server->surface_registry,
+					      view_get_app_id(view), (uintptr_t) surface,
+					      cg_surface_controller_now(controller))) {
 		view_quarantine(view);
 		return false;
 	}
@@ -140,8 +140,7 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 		return true;
 	}
 	view->poc_role = view_role_from_surface_kind(view->surface_policy.identity.kind);
-	if (new_association &&
-	    !cg_surface_controller_notify_associated(controller, &view->surface_policy.identity)) {
+	if (new_association && !cg_surface_controller_notify_associated(controller, &view->surface_policy.identity)) {
 		struct cg_surface_identity identity = view->surface_policy.identity;
 		(void) cg_surface_registry_retire(&view->server->surface_registry, identity.scene_id,
 						  identity.surface_id);

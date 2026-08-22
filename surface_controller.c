@@ -59,8 +59,8 @@ monotonic_now(void *data)
 }
 
 static void
-emit_event(struct cg_surface_controller *controller, enum cg_surface_controller_event_type type,
-	   cg_scene_id scene_id, cg_surface_id surface_id)
+emit_event(struct cg_surface_controller *controller, enum cg_surface_controller_event_type type, cg_scene_id scene_id,
+	   cg_surface_id surface_id)
 {
 	const struct cg_surface_controller_event event = {
 		.type = type,
@@ -232,8 +232,8 @@ cg_surface_controller_init(struct cg_surface_controller *controller)
 bool
 cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_event_loop *event_loop,
 			    const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
-			    cg_surface_controller_now_func now, void *now_data,
-			    cg_surface_controller_event_func event, void *event_data)
+			    cg_surface_controller_now_func now, void *now_data, cg_surface_controller_event_func event,
+			    void *event_data)
 {
 	struct sockaddr_un address = {.sun_family = AF_UNIX};
 

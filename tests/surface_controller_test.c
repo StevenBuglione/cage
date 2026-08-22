@@ -122,8 +122,8 @@ main(void)
 	assert(controller.applied_messages == 1);
 	assert(controller.rejected_messages == 0);
 	assert(cg_surface_registry_find(&registry, 7, 100)->state == CG_SURFACE_REGISTRATION_PENDING);
-	assert(cg_surface_registry_associate(&registry, &register_request.token, 0x1000, now,
-					     &associated_identity) == CG_SURFACE_REGISTRY_OK);
+	assert(cg_surface_registry_associate(&registry, &register_request.token, 0x1000, now, &associated_identity) ==
+	       CG_SURFACE_REGISTRY_OK);
 	assert(cg_surface_controller_notify_associated(&controller, &associated_identity));
 	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_ASSOCIATED_SIZE);
 	assert(memcmp(bytes, "LSC1\x01\x81\x00\x28", 8) == 0);
