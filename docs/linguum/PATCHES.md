@@ -40,3 +40,21 @@ each slice lands.
 
 The `cg_poc_*` namespace and application titles are characterization-only and
 must be removed when the token registry and generic scene model replace them.
+
+### 2. Private layout-control socket
+
+- Commits: `cff9471dcddef7cd6ffea38f5d710bb960470061`,
+  `0509bb707abda0491214fd643a2873ab410461f1`,
+  `af70c8771a0c2c2b68aed9ac518395ad43c8578e`
+- Scope: private nonblocking Unix datagram transport, bounded width messages,
+  event-loop adapter, and exact cleanup
+- Production behavior: matches the POC width-control path when explicitly
+  enabled by its environment variables
+- Pinned Nix build: PASS
+- Meson tests: 2 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The socket integration test proves `0600` permissions, valid delivery,
+nonblocking empty receive, rejection of malformed/embedded-NUL/oversized
+datagrams, idempotent close, and socket-file removal without a display or human
+operator.

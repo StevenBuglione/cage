@@ -41,3 +41,21 @@ Output:
 /nix/store/kmr8lpy4wscn4szg6f8kfqv26n5p7gwc-cage-0.3.0
 binary SHA-256: 42bcf73a490927024ecf67af24957dceef7c1d4a02c785832ee2777784fe3d6f
 ```
+
+## M1-WP02 checkpoint 2 — layout control socket
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `af70c8771a0c2c2b68aed9ac518395ad43c8578e` | PASS |
+| layout characterization | Meson test | PASS |
+| real Unix socket integration | Meson test | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/nlklzjqmkbbd3c6jghz8j1zp50x0hzc2-cage-0.3.0
+binary SHA-256: 9fc86cfb008b6f7688d05833200938db08be3994071ef45cce443142b21ff2d3
+```

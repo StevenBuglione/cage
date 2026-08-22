@@ -1,6 +1,6 @@
 # M1-WP02 — POC Patch Replay
 
-Status: in progress (checkpoint 1 of 6 verified)
+Status: in progress (checkpoints 1–2 of 6 verified)
 
 ## Locked artifact
 
@@ -31,3 +31,26 @@ binary SHA-256: 42bcf73a490927024ecf67af24957dceef7c1d4a02c785832ee2777784fe3d6f
 
 All verification ran unattended on clean source. No display, protected content,
 account data, pixels, watching, clicking, or listening was used.
+
+## Checkpoint 2 — private layout-control socket
+
+The production event-loop adapter now uses a small testable transport boundary.
+It accepts only a socket beneath `XDG_RUNTIME_DIR`, sets close-on-exec and
+nonblocking flags, applies `0600`, and rejects empty, malformed, embedded-NUL,
+and oversized datagrams. Teardown is idempotent and removes the exact socket.
+
+Verified Cage head: `af70c8771a0c2c2b68aed9ac518395ad43c8578e`
+
+```text
+pinned Nix Cage build: PASS
+Meson poc-layout-characterization: PASS
+Meson poc-layout-socket: PASS
+Meson total: 2 passed, 0 failed
+clang-format 21.1.8 --dry-run --Werror: PASS
+Nix output: /nix/store/nlklzjqmkbbd3c6jghz8j1zp50x0hzc2-cage-0.3.0
+binary SHA-256: 9fc86cfb008b6f7688d05833200938db08be3994071ef45cce443142b21ff2d3
+```
+
+The integration test creates and drives a real Unix datagram socket inside a
+temporary private runtime directory. It requires no compositor display or
+operator and cleans its exact resources before exiting.
