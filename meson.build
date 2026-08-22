@@ -235,6 +235,19 @@ scene_model_test = executable(
 
 test('scene-model', scene_model_test)
 
+resize_boundary_test = executable(
+  'resize-boundary-test',
+  [
+    'resize_boundary.c',
+    'scene_model.c',
+    'surface_registry.c',
+    'tests/resize_boundary_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('resize-boundary', resize_boundary_test)
+
 python = import('python').find_installation()
 test(
   'framework-source-policy',

@@ -108,8 +108,8 @@ cg_scene_model_find(const struct cg_scene_model *model, cg_scene_id scene_id)
 	return NULL;
 }
 
-static struct cg_scene_record *
-find_mutable(struct cg_scene_model *model, cg_scene_id scene_id)
+struct cg_scene_record *
+cg_scene_model_find_mutable(struct cg_scene_model *model, cg_scene_id scene_id)
 {
 	return (struct cg_scene_record *) cg_scene_model_find(model, scene_id);
 }
@@ -157,7 +157,7 @@ cg_scene_model_create(struct cg_scene_model *model, cg_scene_id scene_id, cg_out
 enum cg_scene_result
 cg_scene_model_destroy(struct cg_scene_model *model, cg_scene_id scene_id)
 {
-	struct cg_scene_record *record = find_mutable(model, scene_id);
+	struct cg_scene_record *record = cg_scene_model_find_mutable(model, scene_id);
 
 	if (!model || scene_id == 0) {
 		return CG_SCENE_INVALID;
@@ -168,6 +168,12 @@ cg_scene_model_destroy(struct cg_scene_model *model, cg_scene_id scene_id)
 	memset(record, 0, sizeof(*record));
 	model->scene_count--;
 	return CG_SCENE_OK;
+}
+
+struct cg_scene_surface_state *
+cg_scene_snapshot_find_surface_mutable(struct cg_scene_snapshot *snapshot, cg_surface_id surface_id)
+{
+	return (struct cg_scene_surface_state *) cg_scene_snapshot_find_surface(snapshot, surface_id);
 }
 
 const struct cg_scene_surface_state *
@@ -246,10 +252,20 @@ validate_snapshot(const struct cg_scene_record *record, const struct cg_surface_
 	}
 	for (uint16_t index = 0; index < snapshot->resize_boundary_count; index++) {
 		const struct cg_scene_resize_boundary *boundary = &snapshot->resize_boundaries[index];
+		const struct cg_scene_surface_state *target =
+			cg_scene_snapshot_find_surface(snapshot, boundary->target_surface_id);
+		bool horizontal = boundary->edge == CG_SCENE_RESIZE_EDGE_LEFT ||
+				  boundary->edge == CG_SCENE_RESIZE_EDGE_RIGHT;
 		if (boundary->boundary_id == 0 || boundary->target_surface_id == 0 || !edge_valid(boundary->edge) ||
 		    boundary->minimum_size == 0 || boundary->minimum_size > boundary->maximum_size ||
-		    boundary->hit_slop > CG_SCENE_RESIZE_HIT_SLOP_MAX || !cursor_valid(boundary->cursor) ||
-		    !cg_scene_snapshot_find_surface(snapshot, boundary->target_surface_id)) {
+		    boundary->maximum_size > INT32_MAX || boundary->hit_slop > CG_SCENE_RESIZE_HIT_SLOP_MAX ||
+		    !cursor_valid(boundary->cursor) || !target ||
+		    (horizontal ? boundary->cursor != CG_SCENE_RESIZE_CURSOR_COLUMN
+				: boundary->cursor != CG_SCENE_RESIZE_CURSOR_ROW) ||
+		    (horizontal ? (uint32_t) target->bounds.width : (uint32_t) target->bounds.height) <
+			boundary->minimum_size ||
+		    (horizontal ? (uint32_t) target->bounds.width : (uint32_t) target->bounds.height) >
+			boundary->maximum_size) {
 			return CG_SCENE_BOUNDARY_INVALID;
 		}
 		for (uint16_t other = 0; other < index; other++) {
@@ -271,7 +287,7 @@ cg_scene_model_apply(struct cg_scene_model *model, const struct cg_surface_regis
 	if (!model || !snapshot) {
 		return CG_SCENE_INVALID;
 	}
-	record = find_mutable(model, snapshot->scene_id);
+	record = cg_scene_model_find_mutable(model, snapshot->scene_id);
 	if (!record) {
 		model->rejected_snapshots++;
 		return CG_SCENE_NOT_FOUND;
@@ -301,7 +317,7 @@ enum cg_scene_result
 cg_scene_model_resize_output(struct cg_scene_model *model, cg_scene_id scene_id, uint32_t output_width,
 			     uint32_t output_height)
 {
-	struct cg_scene_record *record = find_mutable(model, scene_id);
+	struct cg_scene_record *record = cg_scene_model_find_mutable(model, scene_id);
 
 	if (!model || scene_id == 0 || !output_size_valid(output_width, output_height)) {
 		return CG_SCENE_INVALID;

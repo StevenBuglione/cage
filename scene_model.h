@@ -109,8 +109,11 @@ enum cg_scene_result cg_scene_model_apply(struct cg_scene_model *model, const st
 enum cg_scene_result cg_scene_model_resize_output(struct cg_scene_model *model, cg_scene_id scene_id,
 						  uint32_t output_width, uint32_t output_height);
 const struct cg_scene_record *cg_scene_model_find(const struct cg_scene_model *model, cg_scene_id scene_id);
+struct cg_scene_record *cg_scene_model_find_mutable(struct cg_scene_model *model, cg_scene_id scene_id);
 const struct cg_scene_surface_state *cg_scene_snapshot_find_surface(const struct cg_scene_snapshot *snapshot,
 								    cg_surface_id surface_id);
+struct cg_scene_surface_state *cg_scene_snapshot_find_surface_mutable(struct cg_scene_snapshot *snapshot,
+								     cg_surface_id surface_id);
 bool cg_scene_model_resolve_surface(const struct cg_scene_model *model, cg_scene_id scene_id, cg_surface_id surface_id,
 				    struct cg_scene_rect *resolved_out);
 const struct cg_scene_surface_state *cg_scene_model_hit_test(const struct cg_scene_model *model,
