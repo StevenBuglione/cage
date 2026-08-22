@@ -58,14 +58,13 @@ cg_poc_layout_classify_title(bool enabled, const char *title)
 
 bool
 cg_poc_layout_rect(struct cg_poc_rect output, int browser_width, enum cg_poc_surface_role role,
-	struct cg_poc_rect *target_out)
+		   struct cg_poc_rect *target_out)
 {
 	struct cg_poc_rect target = output;
 	int workspace_width;
 
 	if (!target_out || browser_width <= 0 ||
-	    (role != CG_POC_SURFACE_WORKSPACE && role != CG_POC_SURFACE_CONTROLS &&
-	     role != CG_POC_SURFACE_BROWSER)) {
+	    (role != CG_POC_SURFACE_WORKSPACE && role != CG_POC_SURFACE_CONTROLS && role != CG_POC_SURFACE_BROWSER)) {
 		return false;
 	}
 

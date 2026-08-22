@@ -25,6 +25,6 @@ struct cg_poc_rect {
 bool cg_poc_layout_parse_width(const char *value, int *width_out);
 enum cg_poc_surface_role cg_poc_layout_classify_title(bool enabled, const char *title);
 bool cg_poc_layout_rect(struct cg_poc_rect output, int browser_width, enum cg_poc_surface_role role,
-	struct cg_poc_rect *target_out);
+			struct cg_poc_rect *target_out);
 
 #endif
