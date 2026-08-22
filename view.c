@@ -383,8 +383,8 @@ view_position_all(struct cg_server *server)
 	if (server->surface_controller.accepting) {
 		for (size_t index = 0; index < CG_SCENE_CAPACITY; index++) {
 			if (server->scene_model.scenes[index].occupied) {
-				view_apply_scene_order_and_focus(server,
-							 server->scene_model.scenes[index].snapshot.scene_id);
+				cg_scene_id scene_id = server->scene_model.scenes[index].snapshot.scene_id;
+				view_apply_scene_order_and_focus(server, scene_id);
 			}
 		}
 	}
