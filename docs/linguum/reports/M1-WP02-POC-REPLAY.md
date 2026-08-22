@@ -1,6 +1,6 @@
 # M1-WP02 — POC Patch Replay
 
-Status: in progress (checkpoints 1–4 of 6 verified)
+Status: in progress (checkpoints 1–5 of 6 verified)
 
 ## Locked artifact
 
@@ -95,3 +95,22 @@ binary SHA-256: 0d3a30a6fa1a6eec554d6fe7967a59a55b94c4474257c9f871ae9aad64dd2719
 ```
 
 No display or human observation was used.
+
+## Checkpoint 5 — title-change role reassignment
+
+A temporary xdg_toplevel title listener now reproduces the POC's role and slot
+update and keeps the foreign-toplevel title current. The pure suite proves the
+browser → workspace → controls → disabled/default transition sequence.
+
+Verified Cage head: `e70bd5f8e731d2977fde50059eaea803b3c98ad7`
+
+```text
+pinned Nix Cage build: PASS
+all focused Meson suites: 3 passed, 0 failed
+clang-format 21.1.8 --dry-run --Werror: PASS
+Nix output: /nix/store/ryj6npf72qcaqxkvkhaqw0fbrb454ngw-cage-0.3.0
+binary SHA-256: 37ca08d909838299d6965c4c1ef200181e1cfccb615adc14ad987f737360bc0d
+```
+
+This listener exists only for behavioral accounting. The explicit registry in
+M1-WP03 makes identity immutable across title changes.

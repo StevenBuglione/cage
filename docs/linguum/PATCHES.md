@@ -86,3 +86,16 @@ ResizeBoundary replaces this temporary vertical-only model in M1-WP05.
 The layout suite now includes explicit 1920×1080 fullscreen expectations for
 workspace, controls, and browser slots, while its disabled-layout cases retain
 upstream whole-output behavior.
+
+### 5. Title-change role reassignment
+
+- Commit: `e70bd5f8e731d2977fde50059eaea803b3c98ad7`
+- Scope: temporary xdg_toplevel title listener updates the characterized POC
+  role/slot and foreign-toplevel title
+- Pinned Nix build: PASS
+- Meson tests: 3 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The title classification suite includes an explicit transition sequence from
+browser to workspace to controls and back to disabled/default. This behavior is
+historical accounting only; M1-WP03 removes title changes as identity.

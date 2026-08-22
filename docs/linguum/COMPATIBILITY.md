@@ -96,3 +96,21 @@ Output:
 /nix/store/y47kmx8g9gx9l8641mlgmwb28pc9q3r8-cage-0.3.0
 binary SHA-256: 0d3a30a6fa1a6eec554d6fe7967a59a55b94c4474257c9f871ae9aad64dd2719
 ```
+
+## M1-WP02 checkpoint 5 — title-change reassignment
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `e70bd5f8e731d2977fde50059eaea803b3c98ad7` | PASS |
+| title transition sequence | layout test | PASS |
+| all focused Meson suites | 3 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/ryj6npf72qcaqxkvkhaqw0fbrb454ngw-cage-0.3.0
+binary SHA-256: 37ca08d909838299d6965c4c1ef200181e1cfccb615adc14ad987f737360bc0d
+```
