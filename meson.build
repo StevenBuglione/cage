@@ -206,6 +206,19 @@ surface_controller_test = executable(
 
 test('surface-controller-lifecycle', surface_controller_test)
 
+surface_view_policy_test = executable(
+  'surface-view-policy-test',
+  [
+    'surface_registry.c',
+    'surface_token_hint.c',
+    'surface_view_policy.c',
+    'tests/surface_view_policy_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('surface-view-policy', surface_view_policy_test)
+
 summary = [
   '',
   'Cage @0@'.format(version),
