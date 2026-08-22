@@ -55,7 +55,7 @@
 
 #include "idle_inhibit_v1.h"
 #include "output.h"
-#include "poc_layout_socket.h"
+#include "poc_layout_controller.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
@@ -114,34 +114,10 @@ sigchld_handler(int fd, uint32_t mask, void *data)
 	return 0;
 }
 
-static int
-poc_layout_handler(int fd, uint32_t mask, void *data)
+static bool
+apply_poc_layout_width(void *data, int width)
 {
-	struct cg_server *server = data;
-	enum cg_poc_layout_receive_result result;
-	int width;
-
-	if (!(mask & WL_EVENT_READABLE)) {
-		return 0;
-	}
-
-	result = cg_poc_layout_socket_receive(&server->poc_layout_socket, &width);
-	switch (result) {
-	case CG_POC_LAYOUT_RECEIVE_NONE:
-		break;
-	case CG_POC_LAYOUT_RECEIVE_WIDTH:
-		if (!view_set_poc_browser_width(server, width)) {
-			wlr_log(WLR_ERROR, "Ignoring invalid POC browser width: %d", width);
-		}
-		break;
-	case CG_POC_LAYOUT_RECEIVE_INVALID:
-		wlr_log(WLR_ERROR, "Ignoring invalid POC layout message");
-		break;
-	case CG_POC_LAYOUT_RECEIVE_ERROR:
-		wlr_log_errno(WLR_ERROR, "Unable to receive POC layout message");
-		break;
-	}
-	return 0;
+	return view_set_poc_browser_width(data, width);
 }
 
 static bool
@@ -154,15 +130,9 @@ setup_poc_layout_socket(struct cg_server *server, struct wl_event_loop *event_lo
 		return true;
 	}
 
-	if (!cg_poc_layout_socket_open(&server->poc_layout_socket, path, runtime_dir)) {
+	if (!cg_poc_layout_controller_start(
+		    &server->poc_layout_controller, event_loop, path, runtime_dir, apply_poc_layout_width, server)) {
 		wlr_log_errno(WLR_ERROR, "Unable to create POC layout socket");
-		return false;
-	}
-
-	server->poc_layout_source = wl_event_loop_add_fd(event_loop, server->poc_layout_socket.fd, WL_EVENT_READABLE,
-							 poc_layout_handler, server);
-	if (!server->poc_layout_source) {
-		cg_poc_layout_socket_close(&server->poc_layout_socket);
 		return false;
 	}
 
@@ -349,7 +319,7 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	struct cg_server server = {.log_level = WLR_INFO, .poc_layout_socket = {.fd = -1}};
+	struct cg_server server = {.log_level = WLR_INFO, .poc_layout_controller = {.socket = {.fd = -1}}};
 	struct wl_event_source *sigchld_source = NULL;
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
@@ -414,6 +384,7 @@ main(int argc, char *argv[])
 
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
+	cg_poc_layout_controller_init(&server.poc_layout_controller);
 	view_configure_poc_layout(&server);
 
 	server.output_layout = wlr_output_layout_create(server.wl_display);
@@ -725,10 +696,7 @@ end:
 	if (sigchld_source) {
 		wl_event_source_remove(sigchld_source);
 	}
-	if (server.poc_layout_source) {
-		wl_event_source_remove(server.poc_layout_source);
-	}
-	cg_poc_layout_socket_close(&server.poc_layout_socket);
+	cg_poc_layout_controller_stop(&server.poc_layout_controller);
 	seat_destroy(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */

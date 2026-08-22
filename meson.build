@@ -91,6 +91,7 @@ cage_sources = [
   'idle_inhibit_v1.c',
   'output.c',
   'poc_layout.c',
+  'poc_layout_controller.c',
   'poc_layout_socket.c',
   'poc_resize.c',
   'seat.c',
@@ -139,6 +140,20 @@ poc_layout_socket_test = executable(
 )
 
 test('poc-layout-socket', poc_layout_socket_test)
+
+poc_layout_controller_test = executable(
+  'poc-layout-controller-test',
+  [
+    'poc_layout.c',
+    'poc_layout_controller.c',
+    'poc_layout_socket.c',
+    'tests/poc_layout_controller_test.c',
+  ],
+  dependencies: wayland_server,
+  include_directories: include_directories('.'),
+)
+
+test('poc-layout-controller-lifecycle', poc_layout_controller_test)
 
 poc_resize_test = executable(
   'poc-resize-test',
