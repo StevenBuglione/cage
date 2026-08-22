@@ -223,7 +223,7 @@ test_token_hint_round_trip(void)
 	assert(memcmp(&token, &decoded, sizeof(token)) == 0);
 	assert(!cg_surface_token_hint_encode(&token, hint, sizeof(hint) - 1));
 	assert(!cg_surface_token_hint_decode(NULL, &decoded));
-	assert(!cg_surface_token_hint_decode("linguum-surface-v1:00", &decoded));
+	assert(!cg_surface_token_hint_decode("cage-surface-v1:00", &decoded));
 	memcpy(invalid, hint, sizeof(invalid));
 	invalid[0] = 'x';
 	assert(!cg_surface_token_hint_decode(invalid, &decoded));
