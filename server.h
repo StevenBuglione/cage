@@ -13,6 +13,8 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/log.h>
 
+#include "poc_layout_socket.h"
+
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
 #endif
@@ -48,8 +50,7 @@ struct cg_server {
 	struct wl_listener new_output;
 	struct wl_listener output_layout_change;
 	int poc_browser_width;
-	int poc_layout_fd;
-	char poc_layout_socket_path[108];
+	struct cg_poc_layout_socket poc_layout_socket;
 	struct wl_event_source *poc_layout_source;
 
 	struct wl_listener xdg_toplevel_decoration;

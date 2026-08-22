@@ -10,16 +10,11 @@
 
 #include "config.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
@@ -60,7 +55,7 @@
 
 #include "idle_inhibit_v1.h"
 #include "output.h"
-#include "poc_layout.h"
+#include "poc_layout_socket.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
@@ -123,25 +118,28 @@ static int
 poc_layout_handler(int fd, uint32_t mask, void *data)
 {
 	struct cg_server *server = data;
-	char message[32];
-	ssize_t size;
+	enum cg_poc_layout_receive_result result;
 	int width;
 
 	if (!(mask & WL_EVENT_READABLE)) {
 		return 0;
 	}
 
-	size = recv(fd, message, sizeof(message) - 1, MSG_TRUNC);
-	if (size <= 0) {
-		if (size < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-			wlr_log_errno(WLR_ERROR, "Unable to receive POC layout message");
+	result = cg_poc_layout_socket_receive(&server->poc_layout_socket, &width);
+	switch (result) {
+	case CG_POC_LAYOUT_RECEIVE_NONE:
+		break;
+	case CG_POC_LAYOUT_RECEIVE_WIDTH:
+		if (!view_set_poc_browser_width(server, width)) {
+			wlr_log(WLR_ERROR, "Ignoring invalid POC browser width: %d", width);
 		}
-		return 0;
-	}
-
-	if (!cg_poc_layout_parse_message(message, (size_t) size, &width) ||
-	    !view_set_poc_browser_width(server, width)) {
-		wlr_log(WLR_ERROR, "Ignoring invalid POC layout message (%zd bytes)", size);
+		break;
+	case CG_POC_LAYOUT_RECEIVE_INVALID:
+		wlr_log(WLR_ERROR, "Ignoring invalid POC layout message");
+		break;
+	case CG_POC_LAYOUT_RECEIVE_ERROR:
+		wlr_log_errno(WLR_ERROR, "Unable to receive POC layout message");
+		break;
 	}
 	return 0;
 }
@@ -151,40 +149,20 @@ setup_poc_layout_socket(struct cg_server *server, struct wl_event_loop *event_lo
 {
 	const char *path = getenv("CAGE_LINGUUM_LAYOUT_SOCKET");
 	const char *runtime_dir = getenv("XDG_RUNTIME_DIR");
-	struct sockaddr_un address = {.sun_family = AF_UNIX};
 
 	if (!path || !*path) {
 		return true;
 	}
 
-	if (!cg_poc_layout_socket_path_valid(path, runtime_dir, sizeof(address.sun_path))) {
-		wlr_log(WLR_ERROR, "CAGE_LINGUUM_LAYOUT_SOCKET must be inside XDG_RUNTIME_DIR");
-		return false;
-	}
-
-	server->poc_layout_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
-	if (server->poc_layout_fd < 0) {
+	if (!cg_poc_layout_socket_open(&server->poc_layout_socket, path, runtime_dir)) {
 		wlr_log_errno(WLR_ERROR, "Unable to create POC layout socket");
 		return false;
 	}
 
-	strcpy(address.sun_path, path);
-	unlink(path);
-	if (bind(server->poc_layout_fd, (struct sockaddr *) &address, sizeof(address)) < 0 || chmod(path, 0600) < 0) {
-		wlr_log_errno(WLR_ERROR, "Unable to bind POC layout socket");
-		close(server->poc_layout_fd);
-		server->poc_layout_fd = -1;
-		unlink(path);
-		return false;
-	}
-
-	strcpy(server->poc_layout_socket_path, path);
-	server->poc_layout_source =
-		wl_event_loop_add_fd(event_loop, server->poc_layout_fd, WL_EVENT_READABLE, poc_layout_handler, server);
+	server->poc_layout_source = wl_event_loop_add_fd(
+		event_loop, server->poc_layout_socket.fd, WL_EVENT_READABLE, poc_layout_handler, server);
 	if (!server->poc_layout_source) {
-		close(server->poc_layout_fd);
-		server->poc_layout_fd = -1;
-		unlink(path);
+		cg_poc_layout_socket_close(&server->poc_layout_socket);
 		return false;
 	}
 
@@ -371,7 +349,7 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	struct cg_server server = {.log_level = WLR_INFO, .poc_layout_fd = -1};
+	struct cg_server server = {.log_level = WLR_INFO, .poc_layout_socket = {.fd = -1}};
 	struct wl_event_source *sigchld_source = NULL;
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
@@ -750,12 +728,7 @@ end:
 	if (server.poc_layout_source) {
 		wl_event_source_remove(server.poc_layout_source);
 	}
-	if (server.poc_layout_fd >= 0) {
-		close(server.poc_layout_fd);
-	}
-	if (server.poc_layout_socket_path[0]) {
-		unlink(server.poc_layout_socket_path);
-	}
+	cg_poc_layout_socket_close(&server.poc_layout_socket);
 	seat_destroy(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */

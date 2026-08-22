@@ -91,6 +91,7 @@ cage_sources = [
   'idle_inhibit_v1.c',
   'output.c',
   'poc_layout.c',
+  'poc_layout_socket.c',
   'seat.c',
   'view.c',
   'xdg_shell.c',
@@ -125,6 +126,18 @@ poc_layout_test = executable(
 )
 
 test('poc-layout-characterization', poc_layout_test)
+
+poc_layout_socket_test = executable(
+  'poc-layout-socket-test',
+  [
+    'poc_layout.c',
+    'poc_layout_socket.c',
+    'tests/poc_layout_socket_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('poc-layout-socket', poc_layout_socket_test)
 
 summary = [
   '',
