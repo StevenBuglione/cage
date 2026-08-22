@@ -64,17 +64,6 @@
 #include "xwayland.h"
 #endif
 
-void
-server_terminate(struct cg_server *server)
-{
-	// Workaround for https://gitlab.freedesktop.org/wayland/wayland/-/merge_requests/421
-	if (server->terminated) {
-		return;
-	}
-
-	wl_display_terminate(server->wl_display);
-}
-
 static void
 handle_display_destroy(struct wl_listener *listener, void *data)
 {

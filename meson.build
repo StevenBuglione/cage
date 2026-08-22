@@ -93,6 +93,7 @@ cage_sources = [
   'resize_boundary.c',
   'scene_model.c',
   'seat.c',
+  'server_lifecycle.c',
   'surface_control_protocol.c',
   'surface_controller.c',
   'surface_registry.c',
@@ -246,6 +247,18 @@ resize_boundary_test = executable(
 )
 
 test('resize-boundary', resize_boundary_test)
+
+server_lifecycle_test = executable(
+  'server-lifecycle-test',
+  [
+    'server_lifecycle.c',
+    'tests/server_lifecycle_test.c',
+  ],
+  dependencies: [wayland_server, wlroots],
+  include_directories: include_directories('.'),
+)
+
+test('server-lifecycle', server_lifecycle_test)
 
 python = import('python').find_installation()
 test(

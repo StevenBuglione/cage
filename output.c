@@ -217,7 +217,8 @@ output_destroy(struct cg_output *output)
 
 	if (wl_list_empty(&server->outputs) && was_nested_output) {
 		server_terminate(server);
-	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && !wl_list_empty(&server->outputs)) {
+	} else if (!server->terminated && server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST &&
+		   !wl_list_empty(&server->outputs)) {
 		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
 		output_enable(prev);
 		view_position_all(server);

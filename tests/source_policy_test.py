@@ -12,6 +12,7 @@ source_names = set(re.findall(r"'([^']+\.[ch])'", match.group(1)))
 required_sources = {
     "resize_boundary.c",
     "scene_model.c",
+    "server_lifecycle.c",
     "surface_control_protocol.c",
     "surface_controller.c",
     "surface_registry.c",
