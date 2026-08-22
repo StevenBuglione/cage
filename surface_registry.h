@@ -94,6 +94,7 @@ enum cg_surface_registry_result cg_surface_registry_associate(struct cg_surface_
 							      struct cg_surface_identity *identity_out);
 enum cg_surface_registry_result cg_surface_registry_retire(struct cg_surface_registry *registry, cg_scene_id scene_id,
 							   cg_surface_id surface_id);
+size_t cg_surface_registry_retire_scene(struct cg_surface_registry *registry, cg_scene_id scene_id);
 size_t cg_surface_registry_expire(struct cg_surface_registry *registry, uint64_t now_ms);
 const struct cg_surface_registration *cg_surface_registry_find(const struct cg_surface_registry *registry,
 							       cg_scene_id scene_id, cg_surface_id surface_id);

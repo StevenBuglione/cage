@@ -97,6 +97,153 @@ test_associated_golden_vector(void)
 	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_UNKNOWN_TYPE);
 }
 
+static struct cg_scene_snapshot
+scene_snapshot(void)
+{
+	struct cg_scene_snapshot snapshot = {
+		.scene_id = 0x0102030405060708ULL,
+		.output_id = 0x1112131415161718ULL,
+		.revision = 0x2122232425262728ULL,
+		.surface_count = 2,
+		.resize_boundary_count = 1,
+		.has_focused_surface = true,
+		.focused_surface_id = 200,
+	};
+	snapshot.surfaces[0] = (struct cg_scene_surface_state) {
+		.surface_id = 100,
+		.bounds = {.x = -10, .y = 20, .width = 800, .height = 600},
+		.z_index = -5,
+		.visible = true,
+	};
+	snapshot.surfaces[1] = (struct cg_scene_surface_state) {
+		.surface_id = 200,
+		.bounds = {.x = 400, .y = 40, .width = 600, .height = 560},
+		.has_clip = true,
+		.clip = {.x = 450, .y = 50, .width = 500, .height = 500},
+		.z_index = 10,
+		.visible = true,
+		.accepts_input = true,
+		.has_parent = true,
+		.parent_surface_id = 100,
+		.modal = true,
+	};
+	snapshot.resize_boundaries[0] = (struct cg_scene_resize_boundary) {
+		.boundary_id = 55,
+		.target_surface_id = 200,
+		.edge = CG_SCENE_RESIZE_EDGE_LEFT,
+		.minimum_size = 360,
+		.maximum_size = 1200,
+		.hit_slop = 10,
+		.cursor = CG_SCENE_RESIZE_CURSOR_COLUMN,
+		.enabled = true,
+	};
+	return snapshot;
+}
+
+static void
+test_scene_control_round_trip(void)
+{
+	const struct cg_surface_control_create_scene create = {
+		.scene_id = 7,
+		.output_id = 11,
+		.output_width = 1440,
+		.output_height = 900,
+	};
+	const struct cg_surface_control_destroy_scene destroy = {.scene_id = 7};
+	const struct cg_surface_control_resize_output resize = {
+		.scene_id = 7,
+		.output_id = 11,
+		.output_width = 1920,
+		.output_height = 1080,
+	};
+	struct cg_scene_snapshot snapshot = scene_snapshot();
+	struct cg_surface_control_message parsed;
+	uint8_t bytes[CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE];
+	size_t size;
+
+	assert(cg_surface_control_encode_create_scene(&create, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_CREATE_SCENE_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x04\x00\x20", 8) == 0);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_OK);
+	assert(parsed.type == CG_SURFACE_CONTROL_CREATE_SCENE);
+	assert(parsed.create_scene.scene_id == 7 && parsed.create_scene.output_id == 11);
+	assert(parsed.create_scene.output_width == 1440 && parsed.create_scene.output_height == 900);
+
+	assert(cg_surface_control_encode_destroy_scene(&destroy, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_DESTROY_SCENE_SIZE);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_OK);
+	assert(parsed.type == CG_SURFACE_CONTROL_DESTROY_SCENE && parsed.destroy_scene.scene_id == 7);
+
+	assert(cg_surface_control_encode_resize_output(&resize, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_OK);
+	assert(parsed.type == CG_SURFACE_CONTROL_RESIZE_OUTPUT);
+	assert(parsed.resize_output.output_id == 11 && parsed.resize_output.output_width == 1920);
+
+	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + 2 * CG_SURFACE_CONTROL_SURFACE_STATE_SIZE +
+		       CG_SURFACE_CONTROL_RESIZE_BOUNDARY_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x06\x00\xd8", 8) == 0);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_OK);
+	assert(parsed.type == CG_SURFACE_CONTROL_APPLY_SCENE);
+	assert(parsed.scene_snapshot.scene_id == snapshot.scene_id);
+	assert(parsed.scene_snapshot.output_id == snapshot.output_id);
+	assert(parsed.scene_snapshot.revision == snapshot.revision);
+	assert(parsed.scene_snapshot.surface_count == 2);
+	assert(parsed.scene_snapshot.resize_boundary_count == 1);
+	assert(parsed.scene_snapshot.surfaces[0].bounds.x == -10);
+	assert(parsed.scene_snapshot.surfaces[0].z_index == -5);
+	assert(parsed.scene_snapshot.surfaces[1].has_clip);
+	assert(parsed.scene_snapshot.surfaces[1].clip.width == 500);
+	assert(parsed.scene_snapshot.surfaces[1].modal);
+	assert(parsed.scene_snapshot.resize_boundaries[0].boundary_id == 55);
+	assert(parsed.scene_snapshot.resize_boundaries[0].maximum_size == 1200);
+}
+
+static void
+test_scene_message_rejection_and_capacity(void)
+{
+	struct cg_scene_snapshot snapshot = scene_snapshot();
+	struct cg_surface_control_message parsed;
+	uint8_t bytes[CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE + 1];
+	size_t size;
+
+	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	for (size_t truncated = 0; truncated < size; truncated++) {
+		assert(cg_surface_control_parse(bytes, truncated, &parsed) != CG_SURFACE_CONTROL_PARSE_OK);
+	}
+	bytes[37] = 1;
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED);
+	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	bytes[CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + 25] = 1;
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED);
+	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	bytes[size - 1] = 1;
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED);
+	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	bytes[32] = 0xff;
+	bytes[33] = 0xff;
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_FIELDS);
+
+	memset(&snapshot, 0, sizeof(snapshot));
+	snapshot.scene_id = 7;
+	snapshot.output_id = 11;
+	snapshot.revision = 1;
+	snapshot.surface_count = CG_SCENE_SURFACE_CAPACITY;
+	snapshot.resize_boundary_count = CG_SCENE_RESIZE_BOUNDARY_CAPACITY;
+	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_OK);
+	bytes[size] = 0;
+	assert(cg_surface_control_parse(bytes, size + 1, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_SIZE);
+
+	snapshot.scene_id = 0;
+	assert(!cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	assert(!cg_surface_control_encode_create_scene(NULL, bytes, sizeof(bytes), &size));
+	assert(!cg_surface_control_encode_destroy_scene(NULL, bytes, sizeof(bytes), &size));
+	assert(!cg_surface_control_encode_resize_output(NULL, bytes, sizeof(bytes), &size));
+}
+
 static void
 test_size_and_header_rejection(void)
 {
@@ -183,6 +330,8 @@ main(void)
 	test_register_golden_vector();
 	test_unregister_and_reset();
 	test_associated_golden_vector();
+	test_scene_control_round_trip();
+	test_scene_message_rejection_and_capacity();
 	test_size_and_header_rejection();
 	test_register_field_rejection();
 	test_encoder_rejection();

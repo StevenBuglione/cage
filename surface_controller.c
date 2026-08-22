@@ -60,12 +60,13 @@ monotonic_now(void *data)
 
 static void
 emit_event(struct cg_surface_controller *controller, enum cg_surface_controller_event_type type, cg_scene_id scene_id,
-	   cg_surface_id surface_id)
+	   cg_surface_id surface_id, cg_scene_revision revision)
 {
 	const struct cg_surface_controller_event event = {
 		.type = type,
 		.scene_id = scene_id,
 		.surface_id = surface_id,
+		.revision = revision,
 	};
 
 	if (controller->event) {
@@ -87,36 +88,89 @@ disconnect_client(struct cg_surface_controller *controller)
 	if (controller->registry) {
 		cg_surface_registry_reset(controller->registry);
 	}
-	emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0);
+	if (controller->scenes) {
+		cg_scene_model_reset(controller->scenes);
+	}
+	emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0, 0);
 	controller->disconnects++;
 }
 
 static void
 apply_message(struct cg_surface_controller *controller, const struct cg_surface_control_message *message)
 {
+	bool applied = false;
+
 	controller->last_registry_result = CG_SURFACE_REGISTRY_INVALID;
+	controller->last_scene_result = CG_SCENE_INVALID;
 	switch (message->type) {
 	case CG_SURFACE_CONTROL_REGISTER:
 		controller->last_registry_result = cg_surface_registry_register(
 			controller->registry, &message->registration, controller->now(controller->now_data));
+		applied = controller->last_registry_result == CG_SURFACE_REGISTRY_OK;
 		break;
 	case CG_SURFACE_CONTROL_UNREGISTER:
 		controller->last_registry_result = cg_surface_registry_retire(
 			controller->registry, message->unregistration.scene_id, message->unregistration.surface_id);
 		if (controller->last_registry_result == CG_SURFACE_REGISTRY_OK) {
 			emit_event(controller, CG_SURFACE_CONTROLLER_RETIRED, message->unregistration.scene_id,
-				   message->unregistration.surface_id);
+				   message->unregistration.surface_id, 0);
 		}
+		applied = controller->last_registry_result == CG_SURFACE_REGISTRY_OK;
 		break;
 	case CG_SURFACE_CONTROL_RESET:
 		cg_surface_registry_reset(controller->registry);
+		cg_scene_model_reset(controller->scenes);
 		controller->last_registry_result = CG_SURFACE_REGISTRY_OK;
-		emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0);
+		controller->last_scene_result = CG_SCENE_OK;
+		emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0, 0);
+		applied = true;
 		break;
+	case CG_SURFACE_CONTROL_CREATE_SCENE:
+		controller->last_scene_result = cg_scene_model_create(
+			controller->scenes, message->create_scene.scene_id, message->create_scene.output_id,
+			message->create_scene.output_width, message->create_scene.output_height);
+		applied = controller->last_scene_result == CG_SCENE_OK;
+		break;
+	case CG_SURFACE_CONTROL_DESTROY_SCENE:
+		controller->last_scene_result =
+			cg_scene_model_destroy(controller->scenes, message->destroy_scene.scene_id);
+		if (controller->last_scene_result == CG_SCENE_OK) {
+			(void) cg_surface_registry_retire_scene(controller->registry, message->destroy_scene.scene_id);
+			emit_event(controller, CG_SURFACE_CONTROLLER_SCENE_DESTROYED,
+				   message->destroy_scene.scene_id, 0, 0);
+			applied = true;
+		}
+		break;
+	case CG_SURFACE_CONTROL_APPLY_SCENE:
+		controller->last_scene_result =
+			cg_scene_model_apply(controller->scenes, controller->registry, &message->scene_snapshot);
+		if (controller->last_scene_result == CG_SCENE_OK) {
+			emit_event(controller, CG_SURFACE_CONTROLLER_SCENE_APPLIED, message->scene_snapshot.scene_id, 0,
+				   message->scene_snapshot.revision);
+			applied = true;
+		}
+		break;
+	case CG_SURFACE_CONTROL_RESIZE_OUTPUT: {
+		const struct cg_scene_record *record =
+			cg_scene_model_find(controller->scenes, message->resize_output.scene_id);
+		if (!record || record->snapshot.output_id != message->resize_output.output_id) {
+			controller->last_scene_result = record ? CG_SCENE_INVALID : CG_SCENE_NOT_FOUND;
+			break;
+		}
+		controller->last_scene_result = cg_scene_model_resize_output(
+			controller->scenes, message->resize_output.scene_id, message->resize_output.output_width,
+			message->resize_output.output_height);
+		if (controller->last_scene_result == CG_SCENE_OK) {
+			emit_event(controller, CG_SURFACE_CONTROLLER_OUTPUT_RESIZED, message->resize_output.scene_id, 0,
+				   record->snapshot.revision);
+			applied = true;
+		}
+		break;
+	}
 	case CG_SURFACE_CONTROL_ASSOCIATED:
 		break;
 	}
-	if (controller->last_registry_result == CG_SURFACE_REGISTRY_OK) {
+	if (applied) {
 		controller->applied_messages++;
 	} else {
 		controller->rejected_messages++;
@@ -227,17 +281,19 @@ cg_surface_controller_init(struct cg_surface_controller *controller)
 	controller->client_fd = -1;
 	controller->last_parse_result = CG_SURFACE_CONTROL_PARSE_OK;
 	controller->last_registry_result = CG_SURFACE_REGISTRY_OK;
+	controller->last_scene_result = CG_SCENE_OK;
 }
 
 bool
 cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_event_loop *event_loop,
 			    const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
+			    struct cg_scene_model *scenes,
 			    cg_surface_controller_now_func now, void *now_data, cg_surface_controller_event_func event,
 			    void *event_data)
 {
 	struct sockaddr_un address = {.sun_family = AF_UNIX};
 
-	if (!controller || !event_loop || !registry || controller->accepting || controller->listener_fd >= 0 ||
+	if (!controller || !event_loop || !registry || !scenes || controller->accepting || controller->listener_fd >= 0 ||
 	    !socket_path_valid(path, runtime_dir, sizeof(address.sun_path))) {
 		errno = EINVAL;
 		return false;
@@ -257,6 +313,7 @@ cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_
 	}
 	controller->event_loop = event_loop;
 	controller->registry = registry;
+	controller->scenes = scenes;
 	controller->now = now ? now : monotonic_now;
 	controller->now_data = now_data;
 	controller->event = event;
@@ -315,7 +372,8 @@ cg_surface_controller_stop(struct cg_surface_controller *controller)
 		disconnect_client(controller);
 	} else if (controller->registry) {
 		cg_surface_registry_reset(controller->registry);
-		emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0);
+		cg_scene_model_reset(controller->scenes);
+		emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0, 0);
 	}
 	if (controller->listener_source) {
 		wl_event_source_remove(controller->listener_source);
@@ -330,6 +388,7 @@ cg_surface_controller_stop(struct cg_surface_controller *controller)
 		controller->socket_path[0] = '\0';
 	}
 	controller->registry = NULL;
+	controller->scenes = NULL;
 	controller->event_loop = NULL;
 	controller->now = NULL;
 	controller->now_data = NULL;

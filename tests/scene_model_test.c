@@ -110,6 +110,12 @@ test_revision_atomicity_and_idempotence(void)
 	assert(model.applied_snapshots == 1);
 	assert(cg_scene_model_apply(&model, &registry, &snapshot) == CG_SCENE_OK);
 	assert(model.applied_snapshots == 1);
+	struct cg_scene_surface_state reordered = snapshot.surfaces[0];
+	snapshot.surfaces[0] = snapshot.surfaces[1];
+	snapshot.surfaces[1] = reordered;
+	assert(cg_scene_model_apply(&model, &registry, &snapshot) == CG_SCENE_OK);
+	assert(model.applied_snapshots == 1);
+	snapshot = base_snapshot();
 
 	conflict = snapshot;
 	conflict.surfaces[1].bounds.x = 500;

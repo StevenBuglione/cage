@@ -33,8 +33,11 @@ struct cg_view {
 	int lx, ly;
 
 	enum cg_view_type type;
-	enum cg_poc_surface_role poc_role;
 	struct cg_surface_view_policy surface_policy;
+	bool scene_present;
+	bool scene_visible;
+	bool scene_accepts_input;
+	int32_t scene_z_index;
 	const struct cg_view_impl *impl;
 
 	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel_handle;
@@ -62,6 +65,7 @@ void view_activate(struct cg_view *view, bool activate);
 void view_configure_poc_layout(struct cg_server *server);
 bool view_set_poc_browser_width(struct cg_server *server, int width);
 bool view_accepts_input(const struct cg_view *view);
+void view_apply_scene_state(struct cg_view *view);
 void view_handle_surface_controller_event(const struct cg_surface_controller_event *event, void *data);
 void view_position(struct cg_view *view);
 void view_position_all(struct cg_server *server);

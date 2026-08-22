@@ -84,25 +84,17 @@ view_get_app_id(struct cg_view *view)
 	return view->impl->get_app_id(view);
 }
 
-static enum cg_poc_surface_role
-view_role_from_surface_kind(enum cg_surface_kind kind)
-{
-	switch (kind) {
-	case CG_SURFACE_KIND_APP_VIEW:
-		return CG_POC_SURFACE_WORKSPACE;
-	case CG_SURFACE_KIND_OVERLAY:
-		return CG_POC_SURFACE_CONTROLS;
-	case CG_SURFACE_KIND_FIREFOX_VIEW:
-	case CG_SURFACE_KIND_POPUP:
-		return CG_POC_SURFACE_BROWSER;
-	}
-	return CG_POC_SURFACE_DEFAULT;
-}
-
 bool
 view_accepts_input(const struct cg_view *view)
 {
-	return view && cg_surface_view_policy_accepts_input(&view->surface_policy);
+	if (!view || !cg_surface_view_policy_accepts_input(&view->surface_policy)) {
+		return false;
+	}
+	if (!view->server->surface_controller.accepting) {
+		return true;
+	}
+	return view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED && view->scene_present && view->scene_visible &&
+	       view->scene_accepts_input;
 }
 
 static void
@@ -114,6 +106,9 @@ view_quarantine(struct cg_view *view)
 	if (view->surface_policy.state != CG_SURFACE_VIEW_QUARANTINED) {
 		cg_surface_view_policy_quarantine(&view->surface_policy);
 	}
+	view->scene_present = false;
+	view->scene_visible = false;
+	view->scene_accepts_input = false;
 	if (view->scene_tree) {
 		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 	}
@@ -136,10 +131,8 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 		return false;
 	}
 	if (!registry_required) {
-		view->poc_role = CG_POC_SURFACE_DEFAULT;
 		return true;
 	}
-	view->poc_role = view_role_from_surface_kind(view->surface_policy.identity.kind);
 	if (new_association && !cg_surface_controller_notify_associated(controller, &view->surface_policy.identity)) {
 		struct cg_surface_identity identity = view->surface_policy.identity;
 		(void) cg_surface_registry_retire(&view->server->surface_registry, identity.scene_id,
@@ -148,28 +141,6 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 		return false;
 	}
 	return true;
-}
-
-void
-view_handle_surface_controller_event(const struct cg_surface_controller_event *event, void *data)
-{
-	struct cg_server *server = data;
-	struct cg_view *view;
-
-	if (!event || !server) {
-		return;
-	}
-	wl_list_for_each (view, &server->views, link) {
-		if (view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
-			continue;
-		}
-		if (event->type == CG_SURFACE_CONTROLLER_RESET ||
-		    (event->type == CG_SURFACE_CONTROLLER_RETIRED &&
-		     view->surface_policy.identity.scene_id == event->scene_id &&
-		     view->surface_policy.identity.surface_id == event->surface_id)) {
-			view_quarantine(view);
-		}
-	}
 }
 
 bool
@@ -229,27 +200,157 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 	}
 }
 
+static void
+view_hide_scene_state(struct cg_view *view)
+{
+	view->scene_present = false;
+	view->scene_visible = false;
+	view->scene_accepts_input = false;
+	view->scene_z_index = 0;
+	if (view->scene_tree) {
+		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
+		wlr_scene_subsurface_tree_set_clip(&view->scene_tree->node, NULL);
+	}
+	if (view->server->seat) {
+		seat_clear_focus(view->server->seat, view);
+	}
+}
+
+void
+view_apply_scene_state(struct cg_view *view)
+{
+	const struct cg_scene_record *record;
+	const struct cg_scene_surface_state *state;
+	struct cg_scene_rect resolved;
+	struct wlr_box bounds;
+	struct wlr_box clip;
+
+	if (!view || view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
+		return;
+	}
+	record = cg_scene_model_find(&view->server->scene_model, view->surface_policy.identity.scene_id);
+	state = record ? cg_scene_snapshot_find_surface(&record->snapshot, view->surface_policy.identity.surface_id) : NULL;
+	if (!state || !cg_scene_model_resolve_surface(&view->server->scene_model,
+						      view->surface_policy.identity.scene_id,
+						      view->surface_policy.identity.surface_id, &resolved)) {
+		view_hide_scene_state(view);
+		return;
+	}
+	bounds = (struct wlr_box) {
+		.x = state->bounds.x,
+		.y = state->bounds.y,
+		.width = state->bounds.width,
+		.height = state->bounds.height,
+	};
+	clip = (struct wlr_box) {
+		.x = resolved.x - state->bounds.x,
+		.y = resolved.y - state->bounds.y,
+		.width = resolved.width,
+		.height = resolved.height,
+	};
+	view->scene_present = true;
+	view->scene_visible = state->visible;
+	view->scene_accepts_input = state->accepts_input;
+	view->scene_z_index = state->z_index;
+	view_maximize(view, &bounds);
+	wlr_scene_subsurface_tree_set_clip(&view->scene_tree->node, &clip);
+	wlr_scene_node_set_enabled(&view->scene_tree->node, true);
+	if (!view->scene_accepts_input && view->server->seat) {
+		seat_clear_focus(view->server->seat, view);
+	}
+}
+
+static void
+view_apply_scene_order_and_focus(struct cg_server *server, cg_scene_id scene_id)
+{
+	struct cg_view *ordered[CG_SCENE_SURFACE_CAPACITY];
+	size_t count = 0;
+	struct cg_view *view;
+	const struct cg_scene_record *record = cg_scene_model_find(&server->scene_model, scene_id);
+
+	wl_list_for_each (view, &server->views, link) {
+		if (view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED ||
+		    view->surface_policy.identity.scene_id != scene_id || !view->scene_present || !view->scene_visible) {
+			continue;
+		}
+		size_t position = count;
+		while (position > 0 &&
+		       (ordered[position - 1]->scene_z_index > view->scene_z_index ||
+			(ordered[position - 1]->scene_z_index == view->scene_z_index &&
+			 ordered[position - 1]->surface_policy.identity.surface_id >
+				 view->surface_policy.identity.surface_id))) {
+			ordered[position] = ordered[position - 1];
+			position--;
+		}
+		ordered[position] = view;
+		count++;
+	}
+	for (size_t index = 0; index < count; index++) {
+		wlr_scene_node_raise_to_top(&ordered[index]->scene_tree->node);
+	}
+	struct cg_view *focused = seat_get_focus(server->seat);
+	if (!record || !record->snapshot.has_focused_surface) {
+		if (focused && focused->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED &&
+		    focused->surface_policy.identity.scene_id == scene_id) {
+			seat_clear_focus(server->seat, focused);
+		}
+		return;
+	}
+	for (size_t index = 0; index < count; index++) {
+		if (ordered[index]->surface_policy.identity.surface_id == record->snapshot.focused_surface_id) {
+			seat_set_focus(server->seat, ordered[index]);
+			return;
+		}
+	}
+	if (focused && focused->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED &&
+	    focused->surface_policy.identity.scene_id == scene_id) {
+		seat_clear_focus(server->seat, focused);
+	}
+}
+
+void
+view_handle_surface_controller_event(const struct cg_surface_controller_event *event, void *data)
+{
+	struct cg_server *server = data;
+	struct cg_view *view;
+
+	if (!event || !server) {
+		return;
+	}
+	wl_list_for_each (view, &server->views, link) {
+		if (view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
+			continue;
+		}
+		if (event->type == CG_SURFACE_CONTROLLER_RESET ||
+		    ((event->type == CG_SURFACE_CONTROLLER_RETIRED ||
+		      event->type == CG_SURFACE_CONTROLLER_SCENE_DESTROYED) &&
+		     view->surface_policy.identity.scene_id == event->scene_id &&
+		     (event->type == CG_SURFACE_CONTROLLER_SCENE_DESTROYED ||
+		      view->surface_policy.identity.surface_id == event->surface_id))) {
+			view_quarantine(view);
+			continue;
+		}
+		if ((event->type == CG_SURFACE_CONTROLLER_SCENE_APPLIED ||
+		     event->type == CG_SURFACE_CONTROLLER_OUTPUT_RESIZED) &&
+		    view->surface_policy.identity.scene_id == event->scene_id) {
+			view_apply_scene_state(view);
+		}
+	}
+	if (event->type == CG_SURFACE_CONTROLLER_SCENE_APPLIED ||
+	    event->type == CG_SURFACE_CONTROLLER_OUTPUT_RESIZED) {
+		view_apply_scene_order_and_focus(server, event->scene_id);
+	}
+}
+
 void
 view_position(struct cg_view *view)
 {
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
-	struct cg_poc_rect output = {
-		.x = layout_box.x,
-		.y = layout_box.y,
-		.width = layout_box.width,
-		.height = layout_box.height,
-	};
-	struct cg_poc_rect target;
 
-	if (cg_poc_layout_rect(output, view->server->poc_browser_width, view->poc_role, &target)) {
-		struct wlr_box target_box = {
-			.x = target.x,
-			.y = target.y,
-			.width = target.width,
-			.height = target.height,
-		};
-		view_maximize(view, &target_box);
+	if (view->server->surface_controller.accepting &&
+	    view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED) {
+		view_apply_scene_state(view);
 		return;
 	}
 
@@ -264,9 +365,29 @@ void
 view_position_all(struct cg_server *server)
 {
 	struct cg_view *view;
+	if (server->surface_controller.accepting) {
+		struct wlr_box layout_box;
+		wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
+		for (size_t index = 0; index < CG_SCENE_CAPACITY; index++) {
+			if (server->scene_model.scenes[index].occupied) {
+				(void) cg_scene_model_resize_output(&server->scene_model,
+							    server->scene_model.scenes[index].snapshot.scene_id,
+							    (uint32_t) layout_box.width,
+							    (uint32_t) layout_box.height);
+			}
+		}
+	}
 	wl_list_for_each (view, &server->views, link) {
 		if (cg_surface_view_policy_visible(&view->surface_policy)) {
 			view_position(view);
+		}
+	}
+	if (server->surface_controller.accepting) {
+		for (size_t index = 0; index < CG_SCENE_CAPACITY; index++) {
+			if (server->scene_model.scenes[index].occupied) {
+				view_apply_scene_order_and_focus(server,
+							 server->scene_model.scenes[index].snapshot.scene_id);
+			}
 		}
 	}
 }
@@ -296,7 +417,9 @@ handle_surface_request_activate(struct wl_listener *listener, void *data)
 	if (!view_accepts_input(view)) {
 		return;
 	}
-	wlr_scene_node_raise_to_top(&view->scene_tree->node);
+	if (view->surface_policy.state == CG_SURFACE_VIEW_UNMANAGED) {
+		wlr_scene_node_raise_to_top(&view->scene_tree->node);
+	}
 	seat_set_focus(view->server->seat, view);
 }
 
@@ -322,7 +445,8 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 #if CAGE_HAS_XWAYLAND
 	/* We shouldn't position override-redirect windows. They set
 	   their own (x,y) coordinates in handle_wayland_surface_map. */
-	if (view->type != CAGE_XWAYLAND_VIEW || xwayland_view_should_manage(view))
+	if (view->server->surface_controller.accepting || view->type != CAGE_XWAYLAND_VIEW ||
+	    xwayland_view_should_manage(view))
 #endif
 	{
 		view_position(view);
@@ -339,7 +463,10 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 	view->request_close.notify = handle_surface_request_close;
 	wl_signal_add(&view->foreign_toplevel_handle->events.request_close, &view->request_close);
 
-	if (associated) {
+	if (associated && view->server->surface_controller.accepting &&
+	    view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED) {
+		view_apply_scene_order_and_focus(view->server, view->surface_policy.identity.scene_id);
+	} else if (associated) {
 		seat_set_focus(view->server->seat, view);
 	}
 	return;
@@ -380,7 +507,6 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 {
 	view->server = server;
 	view->type = type;
-	view->poc_role = CG_POC_SURFACE_DEFAULT;
 	cg_surface_view_policy_init(&view->surface_policy);
 	view->impl = impl;
 }

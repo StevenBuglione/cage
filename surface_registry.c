@@ -254,3 +254,24 @@ cg_surface_registry_retire(struct cg_surface_registry *registry, cg_scene_id sce
 	}
 	return CG_SURFACE_REGISTRY_NOT_FOUND;
 }
+
+size_t
+cg_surface_registry_retire_scene(struct cg_surface_registry *registry, cg_scene_id scene_id)
+{
+	size_t retired = 0;
+
+	if (!registry || scene_id == 0) {
+		return 0;
+	}
+	for (size_t index = 0; index < CG_SURFACE_REGISTRY_CAPACITY; index++) {
+		struct cg_surface_registration *entry = &registry->entries[index];
+		if (!entry->occupied || entry->identity.scene_id != scene_id ||
+		    entry->state == CG_SURFACE_REGISTRATION_RETIRED) {
+			continue;
+		}
+		entry->state = CG_SURFACE_REGISTRATION_RETIRED;
+		entry->associated_surface = 0;
+		retired++;
+	}
+	return retired;
+}

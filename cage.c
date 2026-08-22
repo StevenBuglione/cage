@@ -125,7 +125,8 @@ setup_surface_controller(struct cg_server *server, struct wl_event_loop *event_l
 	}
 
 	if (!cg_surface_controller_start(&server->surface_controller, event_loop, path, runtime_dir,
-					 &server->surface_registry, NULL, NULL, view_handle_surface_controller_event,
+					 &server->surface_registry, &server->scene_model, NULL, NULL,
+					 view_handle_surface_controller_event,
 					 server)) {
 		wlr_log_errno(WLR_ERROR, "Unable to create framework surface controller");
 		return false;
@@ -383,6 +384,7 @@ main(int argc, char *argv[])
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
 	cg_surface_registry_init(&server.surface_registry);
+	cg_scene_model_init(&server.scene_model);
 	cg_surface_controller_init(&server.surface_controller);
 	view_configure_poc_layout(&server);
 

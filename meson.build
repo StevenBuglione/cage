@@ -92,6 +92,7 @@ cage_sources = [
   'output.c',
   'poc_layout.c',
   'poc_resize.c',
+  'scene_model.c',
   'seat.c',
   'surface_control_protocol.c',
   'surface_controller.c',
@@ -199,6 +200,7 @@ surface_controller_test = executable(
   [
     'surface_control_protocol.c',
     'surface_controller.c',
+    'scene_model.c',
     'surface_registry.c',
     'tests/surface_controller_test.c',
   ],

@@ -156,6 +156,23 @@ test_duplicate_surface_and_capacity(void)
 }
 
 static void
+test_scene_retirement(void)
+{
+	struct cg_surface_registry registry;
+	struct cg_surface_registration_request first = request_for(100, 1, CG_SURFACE_KIND_APP_VIEW);
+	struct cg_surface_registration_request second = request_for(101, 2, CG_SURFACE_KIND_FIREFOX_VIEW);
+
+	cg_surface_registry_init(&registry);
+	assert(cg_surface_registry_register(&registry, &first, 0) == CG_SURFACE_REGISTRY_OK);
+	assert(cg_surface_registry_register(&registry, &second, 0) == CG_SURFACE_REGISTRY_OK);
+	assert(cg_surface_registry_retire_scene(&registry, 7) == 2);
+	assert(cg_surface_registry_find(&registry, 7, 100)->state == CG_SURFACE_REGISTRATION_RETIRED);
+	assert(cg_surface_registry_find(&registry, 7, 101)->state == CG_SURFACE_REGISTRATION_RETIRED);
+	assert(cg_surface_registry_retire_scene(&registry, 7) == 0);
+	assert(cg_surface_registry_retire_scene(&registry, 0) == 0);
+}
+
+static void
 test_reset_zeroes_tokens_and_state(void)
 {
 	struct cg_surface_registry registry;
@@ -208,6 +225,7 @@ main(void)
 	test_parent_rules();
 	test_expiry_unknown_surface_and_retirement();
 	test_duplicate_surface_and_capacity();
+	test_scene_retirement();
 	test_reset_zeroes_tokens_and_state();
 	test_token_hint_round_trip();
 	return 0;

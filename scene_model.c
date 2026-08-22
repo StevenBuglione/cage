@@ -59,12 +59,21 @@ snapshot_equal(const struct cg_scene_snapshot *left, const struct cg_scene_snaps
 		return false;
 	}
 	for (uint16_t index = 0; index < left->surface_count; index++) {
-		if (!surface_equal(&left->surfaces[index], &right->surfaces[index])) {
+		const struct cg_scene_surface_state *matching =
+			cg_scene_snapshot_find_surface(right, left->surfaces[index].surface_id);
+		if (!matching || !surface_equal(&left->surfaces[index], matching)) {
 			return false;
 		}
 	}
 	for (uint16_t index = 0; index < left->resize_boundary_count; index++) {
-		if (!boundary_equal(&left->resize_boundaries[index], &right->resize_boundaries[index])) {
+		const struct cg_scene_resize_boundary *matching = NULL;
+		for (uint16_t other = 0; other < right->resize_boundary_count; other++) {
+			if (right->resize_boundaries[other].boundary_id == left->resize_boundaries[index].boundary_id) {
+				matching = &right->resize_boundaries[other];
+				break;
+			}
+		}
+		if (!matching || !boundary_equal(&left->resize_boundaries[index], matching)) {
 			return false;
 		}
 	}

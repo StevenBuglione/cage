@@ -10,6 +10,7 @@ assert match, "cage_sources block is missing"
 source_names = set(re.findall(r"'([^']+\.[ch])'", match.group(1)))
 
 required_sources = {
+    "scene_model.c",
     "surface_control_protocol.c",
     "surface_controller.c",
     "surface_registry.c",
@@ -47,3 +48,5 @@ for forbidden in (
 
 fixture = (root / "tests" / "poc_title_fixture.c").read_text(encoding="utf-8")
 assert "Linguum Workspace" in fixture and "Linguum Browser Controls" in fixture
+view_source = (root / "view.c").read_text(encoding="utf-8")
+assert "cg_poc_layout_rect" not in view_source, "production view placement must use the scene model"

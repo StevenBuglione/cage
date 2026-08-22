@@ -14,6 +14,7 @@
 #include <wlr/util/log.h>
 
 #include "poc_resize.h"
+#include "scene_model.h"
 #include "surface_controller.h"
 #include "surface_registry.h"
 
@@ -54,6 +55,7 @@ struct cg_server {
 	int poc_browser_width;
 	struct cg_poc_resize_state poc_resize;
 	struct cg_surface_registry surface_registry;
+	struct cg_scene_model scene_model;
 	struct cg_surface_controller surface_controller;
 
 	struct wl_listener xdg_toplevel_decoration;
