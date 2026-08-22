@@ -538,8 +538,9 @@ cg_surface_control_encode_registered(const struct cg_surface_registration_reques
 	if (!registration_fields_valid(request)) {
 		return false;
 	}
-	return encode_identity_event(CG_SURFACE_CONTROL_REGISTERED, request->scene_id, request->surface_id, request->kind,
-				     request->has_parent, request->parent_surface_id, bytes_out, capacity, size_out);
+	return encode_identity_event(CG_SURFACE_CONTROL_REGISTERED, request->scene_id, request->surface_id,
+				     request->kind, request->has_parent, request->parent_surface_id, bytes_out,
+				     capacity, size_out);
 }
 
 bool
