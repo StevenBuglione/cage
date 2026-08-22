@@ -114,3 +114,21 @@ Output:
 /nix/store/ryj6npf72qcaqxkvkhaqw0fbrb454ngw-cage-0.3.0
 binary SHA-256: 37ca08d909838299d6965c4c1ef200181e1cfccb615adc14ad987f737360bc0d
 ```
+
+## M1-WP02 checkpoint 6 — controller teardown
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `1e6bd42f0511c6b6932a5bae99e890cf4993b140` | PASS |
+| real Wayland controller lifecycle | Meson test | PASS |
+| all focused Meson suites | 4 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/q012d78nqmv7c5sl4s1crml12rak7vwj-cage-0.3.0
+binary SHA-256: c5295816fbee51bf9956749a1877ce2fcfa923b47a9cecaab290fa0450d90d8d
+```

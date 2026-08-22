@@ -1,6 +1,6 @@
 # M1-WP02 — POC Patch Replay
 
-Status: in progress (checkpoints 1–5 of 6 verified)
+Result: PASS (6 of 6 checkpoints verified)
 
 ## Locked artifact
 
@@ -114,3 +114,58 @@ binary SHA-256: 37ca08d909838299d6965c4c1ef200181e1cfccb615adc14ad987f737360bc0d
 
 This listener exists only for behavioral accounting. The explicit registry in
 M1-WP03 makes identity immutable across title changes.
+
+## Checkpoint 6 — controller teardown and event-source cleanup
+
+The POC controller now owns its socket and Wayland event source explicitly. Its
+stop path disables new requests before removing the source, closes and unlinks
+the exact socket, clears callbacks, and is idempotent. Counters expose accepted,
+rejected, and receive-error outcomes without inspecting account or media data.
+
+Verified Cage head: `1e6bd42f0511c6b6932a5bae99e890cf4993b140`
+
+```text
+pinned Nix Cage build: PASS
+poc-layout-characterization: PASS
+poc-layout-socket: PASS
+poc-layout-controller-lifecycle: PASS
+poc-resize-characterization: PASS
+Meson total: 4 passed, 0 failed
+clang-format 21.1.8 --dry-run --Werror: PASS
+Nix output: /nix/store/q012d78nqmv7c5sl4s1crml12rak7vwj-cage-0.3.0
+binary SHA-256: c5295816fbee51bf9956749a1877ce2fcfa923b47a9cecaab290fa0450d90d8d
+```
+
+The lifecycle test drives a real Wayland event loop and private socket. It
+proves valid delivery, malformed and callback rejection accounting,
+double-start refusal, exact cleanup, repeated stop, and clean display teardown.
+
+## Locked patch accounting
+
+| Original file/behavior | Verified replacement |
+|---|---|
+| `view.c` / three-surface role and rectangles | pure `poc_layout` fixture plus thin view adapter |
+| `cage.c` / runtime socket and width message | bounded socket and controller modules |
+| `seat.c` / divider grab | pure `poc_resize` state machine plus thin seat adapter |
+| `xdg_shell.c` / fullscreen slot | role-aware `view_position` path |
+| `xdg_shell.c/.h` / title update | temporary title listener and transition test |
+| `server.h` and `cage.c` / teardown ownership | explicit idempotent controller lifecycle |
+
+The locked patch SHA-256 remains
+`8e5aff551b75e3711052955d76e47ddf22e7aba6f4c323163e5210cd35e64c6d`;
+it applies cleanly to the exact Cage v0.3.0 baseline. No behavior remains
+unclassified.
+
+## Work-package gate
+
+- [x] All six logical behaviors replayed and characterized.
+- [x] Deterministic three-surface rectangle fixture exists.
+- [x] Real socket and Wayland event-loop lifecycles are tested.
+- [x] Pinned wlroots/Cage build passes with warnings as errors.
+- [x] All focused tests and source formatting pass.
+- [x] Every implementation and evidence checkpoint is pushed.
+- [x] Verification is fully unattended and uses no protected/user data.
+- [x] App-specific constructs are explicitly temporary and prohibited as the final API.
+
+M1-WP03 may begin. Its first hard requirement is replacing title-based identity
+with the explicit token registry and quarantine model.

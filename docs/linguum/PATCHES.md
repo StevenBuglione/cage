@@ -99,3 +99,23 @@ upstream whole-output behavior.
 The title classification suite includes an explicit transition sequence from
 browser to workspace to controls and back to disabled/default. This behavior is
 historical accounting only; M1-WP03 removes title changes as identity.
+
+### 6. Controller teardown and event-source cleanup
+
+- Commits: `466bed0cfee0c1ddcfb3a1359d5636ec2b1e1556`,
+  `1e6bd42f0511c6b6932a5bae99e890cf4993b140`
+- Scope: explicit controller lifecycle, Wayland event-source ownership,
+  fail-closed start, accounting counters, and idempotent stop
+- Pinned Nix build: PASS
+- Meson tests: 4 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The lifecycle suite uses a real Wayland event loop and private Unix socket. It
+proves accepted/rejected delivery, callback rejection, double-start refusal,
+disable-before-remove teardown, exact socket cleanup, idempotent stop, and clean
+display destruction.
+
+All six behaviors from the locked 474-line POC patch are now accounted for.
+The temporary `cg_poc_*`, titles, environment variables, and raw-width transport
+remain characterization scaffolding—not the framework API—and are replaced in
+M1-WP03 through M1-WP05.
