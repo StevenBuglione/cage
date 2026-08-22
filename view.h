@@ -69,6 +69,7 @@ void view_position(struct cg_view *view);
 void view_position_all(struct cg_server *server);
 void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
+bool view_associate_pending_surface(struct cg_view *view);
 void view_destroy(struct cg_view *view);
 void view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type, const struct cg_view_impl *impl);
 

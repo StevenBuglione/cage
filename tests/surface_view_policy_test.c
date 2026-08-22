@@ -58,6 +58,48 @@ test_association_is_immutable(void)
 }
 
 static void
+test_pending_surface_associates_once_from_late_explicit_hint(void)
+{
+	struct cg_surface_registry registry;
+	struct cg_surface_view_policy policy;
+	struct cg_surface_registration_request request = registration(9);
+	char hint[CG_SURFACE_TOKEN_HINT_SIZE];
+
+	cg_surface_registry_init(&registry);
+	cg_surface_view_policy_init(&policy);
+	assert(cg_surface_registry_register(&registry, &request, 100) == CG_SURFACE_REGISTRY_OK);
+	assert(!cg_surface_view_policy_associate(&policy, true, &registry, "firefox", 0x9000, 101));
+	assert(policy.state == CG_SURFACE_VIEW_PENDING);
+	assert(!cg_surface_view_policy_visible(&policy));
+	assert(!cg_surface_view_policy_accepts_input(&policy));
+	assert(!cg_surface_view_policy_associate_pending(&policy, &registry, "firefox-nightly", 0x9000, 102));
+	assert(policy.state == CG_SURFACE_VIEW_PENDING);
+	assert(cg_surface_token_hint_encode(&request.token, hint, sizeof(hint)));
+	assert(cg_surface_view_policy_associate_pending(&policy, &registry, hint, 0x9000, 103));
+	assert(policy.state == CG_SURFACE_VIEW_ASSOCIATED);
+	assert(policy.identity.surface_id == 100);
+	assert(!cg_surface_view_policy_associate_pending(&policy, &registry, hint, 0x9001, 104));
+	assert(registry.associations == 1);
+}
+
+static void
+test_malformed_late_token_fails_closed(void)
+{
+	struct cg_surface_registry registry;
+	struct cg_surface_view_policy policy;
+
+	cg_surface_registry_init(&registry);
+	cg_surface_view_policy_init(&policy);
+	assert(!cg_surface_view_policy_associate(&policy, true, &registry, NULL, 0xa000, 0));
+	assert(policy.state == CG_SURFACE_VIEW_PENDING);
+	assert(!cg_surface_view_policy_associate_pending(&policy, &registry, "cage-surface-v1:not-a-token",
+						  0xa000, 1));
+	assert(policy.state == CG_SURFACE_VIEW_QUARANTINED);
+	assert(!cg_surface_view_policy_associate_pending(&policy, &registry, "cage-surface-v1:ignored",
+						  0xa000, 2));
+}
+
+static void
 test_registry_reset_invalidates_association(void)
 {
 	struct cg_surface_registry registry;
@@ -89,7 +131,7 @@ test_unknown_invalid_stale_and_replayed_quarantine(void)
 
 	cg_surface_registry_init(&registry);
 	cg_surface_view_policy_init(&invalid);
-	assert(!cg_surface_view_policy_associate(&invalid, true, &registry, "invalid", 0x1000, 0));
+	assert(!cg_surface_view_policy_associate(&invalid, true, &registry, "cage-surface-v1:invalid", 0x1000, 0));
 	assert(invalid.state == CG_SURFACE_VIEW_QUARANTINED);
 	assert(!cg_surface_view_policy_visible(&invalid));
 	assert(!cg_surface_view_policy_accepts_input(&invalid));
@@ -134,6 +176,8 @@ main(void)
 {
 	test_unmanaged_mode();
 	test_association_is_immutable();
+	test_pending_surface_associates_once_from_late_explicit_hint();
+	test_malformed_late_token_fails_closed();
 	test_unknown_invalid_stale_and_replayed_quarantine();
 	test_registry_reset_invalidates_association();
 	test_forced_quarantine_erases_identity();

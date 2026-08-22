@@ -26,6 +26,8 @@
 #include "xwayland.h"
 #endif
 
+static void view_apply_scene_order_and_focus(struct cg_server *server, cg_scene_id scene_id);
+
 char *
 view_get_title(struct cg_view *view)
 {
@@ -61,7 +63,8 @@ view_quarantine(struct cg_view *view)
 	if (!view) {
 		return;
 	}
-	if (view->surface_policy.state != CG_SURFACE_VIEW_QUARANTINED) {
+	if (view->surface_policy.state != CG_SURFACE_VIEW_QUARANTINED &&
+	    view->surface_policy.state != CG_SURFACE_VIEW_PENDING) {
 		cg_surface_view_policy_quarantine(&view->surface_policy);
 	}
 	view->scene_present = false;
@@ -86,8 +89,9 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 	if (!cg_surface_view_policy_associate(&view->surface_policy, registry_required, &view->server->surface_registry,
 					      app_id_hint, (uintptr_t) surface,
 					      cg_surface_controller_now(controller))) {
-		wlr_log(WLR_ERROR,
-			"Framework surface association rejected (hint_present=%s, hint_length=%zu, result=%d)",
+		wlr_log(view->surface_policy.state == CG_SURFACE_VIEW_PENDING ? WLR_DEBUG : WLR_ERROR,
+			"Framework surface association unavailable (pending=%s, hint_present=%s, hint_length=%zu, result=%d)",
+			view->surface_policy.state == CG_SURFACE_VIEW_PENDING ? "true" : "false",
 			app_id_hint ? "true" : "false", app_id_hint ? strlen(app_id_hint) : 0,
 			(int) view->surface_policy.association_result);
 		view_quarantine(view);
@@ -103,6 +107,37 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 		view_quarantine(view);
 		return false;
 	}
+	return true;
+}
+
+bool
+view_associate_pending_surface(struct cg_view *view)
+{
+	struct cg_surface_controller *controller;
+	const char *app_id_hint;
+
+	if (!view || !view->wlr_surface || view->surface_policy.state != CG_SURFACE_VIEW_PENDING) {
+		return false;
+	}
+	controller = &view->server->surface_controller;
+	app_id_hint = view_get_app_id(view);
+	if (!cg_surface_view_policy_associate_pending(&view->surface_policy, &view->server->surface_registry,
+					      app_id_hint, (uintptr_t) view->wlr_surface,
+					      cg_surface_controller_now(controller))) {
+		if (view->surface_policy.state == CG_SURFACE_VIEW_QUARANTINED) {
+			view_quarantine(view);
+		}
+		return false;
+	}
+	if (!cg_surface_controller_notify_associated(controller, &view->surface_policy.identity)) {
+		struct cg_surface_identity identity = view->surface_policy.identity;
+		(void) cg_surface_registry_retire(&view->server->surface_registry, identity.scene_id, identity.surface_id);
+		cg_surface_view_policy_quarantine(&view->surface_policy);
+		view_quarantine(view);
+		return false;
+	}
+	view_apply_scene_state(view);
+	view_apply_scene_order_and_focus(view->server, view->surface_policy.identity.scene_id);
 	return true;
 }
 
