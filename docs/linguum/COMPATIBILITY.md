@@ -186,3 +186,25 @@ Output:
 /nix/store/p296ffw8kkwxip13n3mch317dli5n6wk-cage-0.3.0
 binary SHA-256: 90aa81107c0691619d9689c2535bd900c7f7b88a0649cc74a2f376bdaf9ea874
 ```
+
+## M1-WP03 checkpoint 4 — live association and quarantine
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `4c7b4ba3b4b9d2f4604551e9150f3ab61fdab36c` | PASS |
+| immutable one-time view association | policy + production integration | PASS |
+| explicit association event | golden vector + real seqpacket delivery | PASS |
+| unknown/stale/replayed quarantine | policy suite | PASS |
+| reset/unregister/disconnect invalidation | lifecycle + generation tests | PASS |
+| no title/raw-socket production identity | source-policy test | PASS |
+| all focused Meson suites | 9 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/fm5s25j0qdxpmswk7nry1a6kr8b43f52-cage-0.3.0
+binary SHA-256: ae8e7119af8d5956eb8e4ae833bbd558a90fdd9c0d9381b87dfa6fe2fdf3c2a6
+```

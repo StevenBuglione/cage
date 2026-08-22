@@ -1,6 +1,6 @@
 # M1-WP03 — Explicit Surface Registry
 
-Status: in progress (checkpoints 1–3 verified)
+Status: PASS (all four checkpoints verified unattended)
 
 ## Checkpoint 1 — pure registry and token hint
 
@@ -81,10 +81,40 @@ register/unregister/reset, duplicate and malformed rejection, oversized packet
 rejection, disconnect token erasure, reconnect, exact unlink, and idempotent
 stop. The raw width controller is no longer part of the Cage executable.
 
-## Remaining gate
+## Checkpoint 4 — live association, quarantine, and source policy
 
-- bounded explicit controller protocol;
-- controller-driven pending registration and cleanup;
-- live view association using `app_id` hint;
-- disabled/quarantined unknown views and no focus;
-- removal of title-derived production identity and raw-width production control.
+Production XDG and Xwayland views now obtain a framework token hint from
+`app_id`/class at first map. A successful single-use association permanently
+stores generic scene/surface/kind/parent identity. Later title or app-id changes
+cannot change it. The controller emits a bounded association event only after
+the registry consumes the token.
+
+Unknown, malformed, expired, replayed, or notification-failed views are
+quarantined before the compositor returns to its event loop: their scene node
+is disabled, input hit testing rejects them, activation requests are ignored,
+and any keyboard/pointer focus is cleared. Unregister, reset, controller
+disconnect, or registry-generation mismatch applies the same fail-closed
+policy. An unmapped view cannot survive a registry reset and reappear with a
+stale identity.
+
+Verified Cage head: `4c7b4ba3b4b9d2f4604551e9150f3ab61fdab36c`
+
+```text
+pinned Nix Cage build with upstream werror=true: PASS
+all focused Meson suites: 9 passed, 0 failed
+framework source-policy test: PASS
+clang-format 21.1.8 --dry-run --Werror: PASS
+Nix output: /nix/store/fm5s25j0qdxpmswk7nry1a6kr8b43f52-cage-0.3.0
+binary SHA-256: ae8e7119af8d5956eb8e4ae833bbd558a90fdd9c0d9381b87dfa6fe2fdf3c2a6
+human intervention: none
+```
+
+The frozen title classifier and raw-width socket remain only in WP02 test
+fixtures. The production Cage source list contains neither. A machine-enforced
+source-policy test prevents either identity mechanism from returning.
+
+## Gate result
+
+M1-WP03 is `PASS`. Every required failure case is deterministic and unattended;
+no display, login, media, account, clicking, listening, or operator judgment was
+used as evidence. M1-WP04 may begin.

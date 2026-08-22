@@ -166,3 +166,25 @@ Production Cage no longer consumes the raw POC width datagram. The new socket is
 `0600`, accepts one current-user peer, preserves packet boundaries, rejects
 oversized/invalid messages, and securely resets pending registrations when the
 client disconnects or the controller stops.
+
+### 10. Fail-closed live view association
+
+- Commits: `18b4eddb1836be255e44deee8315aeffeef8fd15`,
+  `790a6af1b399f4effe0ce4c96e883f629017894f`,
+  `87556fb01f0674bdc34e6b37c77c944c12680ed7`,
+  `e3371daf98f0476f3492fd0879377f99fd0253f5`,
+  `d6dd0f30f1994258ad1deeaeab83fb04dd3c550e`,
+  `10de0bf4c681fe536bb92a0deaf0628373137327`,
+  `4c7b4ba3b4b9d2f4604551e9150f3ab61fdab36c`
+- Scope: immutable app-id token association, outbound association event,
+  registry-generation invalidation, scene-node quarantine, focus/input denial,
+  unregister/reset/disconnect propagation, and production source policy
+- Pinned Nix build: PASS
+- Meson tests: 9 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+Application titles no longer participate in production identity or placement.
+The old title classifier and raw-width controller compile only into frozen WP02
+tests. The Cage executable uses the explicit registry/controller path, while
+running without a configured framework controller retains ordinary upstream
+single-application behavior.
