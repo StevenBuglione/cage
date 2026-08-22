@@ -85,13 +85,16 @@ void cg_surface_registry_reset(struct cg_surface_registry *registry);
 bool cg_surface_token_is_valid(const struct cg_surface_token *token);
 bool cg_surface_kind_is_valid(enum cg_surface_kind kind);
 enum cg_surface_registry_result cg_surface_registry_register(struct cg_surface_registry *registry,
-	const struct cg_surface_registration_request *request, uint64_t now_ms);
+							     const struct cg_surface_registration_request *request,
+							     uint64_t now_ms);
 enum cg_surface_registry_result cg_surface_registry_associate(struct cg_surface_registry *registry,
-	const struct cg_surface_token *token, uintptr_t surface, uint64_t now_ms, struct cg_surface_identity *identity_out);
-enum cg_surface_registry_result cg_surface_registry_retire(
-	struct cg_surface_registry *registry, cg_scene_id scene_id, cg_surface_id surface_id);
+							      const struct cg_surface_token *token, uintptr_t surface,
+							      uint64_t now_ms,
+							      struct cg_surface_identity *identity_out);
+enum cg_surface_registry_result cg_surface_registry_retire(struct cg_surface_registry *registry, cg_scene_id scene_id,
+							   cg_surface_id surface_id);
 size_t cg_surface_registry_expire(struct cg_surface_registry *registry, uint64_t now_ms);
-const struct cg_surface_registration *cg_surface_registry_find(
-	const struct cg_surface_registry *registry, cg_scene_id scene_id, cg_surface_id surface_id);
+const struct cg_surface_registration *cg_surface_registry_find(const struct cg_surface_registry *registry,
+							       cg_scene_id scene_id, cg_surface_id surface_id);
 
 #endif

@@ -79,7 +79,8 @@ cg_surface_registry_find(const struct cg_surface_registry *registry, cg_scene_id
 	}
 	for (size_t index = 0; index < CG_SURFACE_REGISTRY_CAPACITY; index++) {
 		const struct cg_surface_registration *entry = &registry->entries[index];
-		if (entry->occupied && entry->identity.scene_id == scene_id && entry->identity.surface_id == surface_id) {
+		if (entry->occupied && entry->identity.scene_id == scene_id &&
+		    entry->identity.surface_id == surface_id) {
 			return entry;
 		}
 	}
@@ -103,8 +104,8 @@ parent_exists(const struct cg_surface_registry *registry, const struct cg_surfac
 }
 
 enum cg_surface_registry_result
-cg_surface_registry_register(struct cg_surface_registry *registry, const struct cg_surface_registration_request *request,
-	uint64_t now_ms)
+cg_surface_registry_register(struct cg_surface_registry *registry,
+			     const struct cg_surface_registration_request *request, uint64_t now_ms)
 {
 	struct cg_surface_registration *available = NULL;
 
@@ -127,7 +128,8 @@ cg_surface_registry_register(struct cg_surface_registry *registry, const struct 
 			}
 			continue;
 		}
-		if (entry->identity.scene_id == request->scene_id && entry->identity.surface_id == request->surface_id) {
+		if (entry->identity.scene_id == request->scene_id &&
+		    entry->identity.surface_id == request->surface_id) {
 			registry->rejected_requests++;
 			return CG_SURFACE_REGISTRY_DUPLICATE_ID;
 		}
@@ -183,7 +185,7 @@ cg_surface_registry_expire(struct cg_surface_registry *registry, uint64_t now_ms
 
 enum cg_surface_registry_result
 cg_surface_registry_associate(struct cg_surface_registry *registry, const struct cg_surface_token *token,
-	uintptr_t surface, uint64_t now_ms, struct cg_surface_identity *identity_out)
+			      uintptr_t surface, uint64_t now_ms, struct cg_surface_identity *identity_out)
 {
 	if (!registry || !cg_surface_token_is_valid(token) || surface == 0 || !identity_out) {
 		if (registry) {
@@ -202,7 +204,8 @@ cg_surface_registry_associate(struct cg_surface_registry *registry, const struct
 			registry->quarantines++;
 			return CG_SURFACE_REGISTRY_TOKEN_EXPIRED;
 		}
-		if (entry->state == CG_SURFACE_REGISTRATION_ASSOCIATED || entry->state == CG_SURFACE_REGISTRATION_RETIRED) {
+		if (entry->state == CG_SURFACE_REGISTRATION_ASSOCIATED ||
+		    entry->state == CG_SURFACE_REGISTRATION_RETIRED) {
 			registry->quarantines++;
 			return CG_SURFACE_REGISTRY_TOKEN_REPLAYED;
 		}
@@ -233,7 +236,8 @@ cg_surface_registry_retire(struct cg_surface_registry *registry, cg_scene_id sce
 	}
 	for (size_t index = 0; index < CG_SURFACE_REGISTRY_CAPACITY; index++) {
 		struct cg_surface_registration *entry = &registry->entries[index];
-		if (!entry->occupied || entry->identity.scene_id != scene_id || entry->identity.surface_id != surface_id) {
+		if (!entry->occupied || entry->identity.scene_id != scene_id ||
+		    entry->identity.surface_id != surface_id) {
 			continue;
 		}
 		if (entry->state == CG_SURFACE_REGISTRATION_RETIRED) {
