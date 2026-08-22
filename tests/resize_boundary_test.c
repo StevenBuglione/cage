@@ -49,6 +49,7 @@ setup(struct cg_scene_model *model, struct cg_surface_registry *registry, enum c
 				  ? CG_SCENE_RESIZE_CURSOR_COLUMN
 				  : CG_SCENE_RESIZE_CURSOR_ROW,
 		.enabled = true,
+		.visible = true,
 	};
 	cg_scene_model_init(model);
 	cg_surface_registry_init(registry);
@@ -83,6 +84,9 @@ test_hit_test_and_disabled_cases(void)
 	cg_scene_model_find_mutable(&model, 7)->snapshot.resize_boundaries[0].enabled = false;
 	assert(!cg_resize_boundary_hit_test(&model, &registry, 400, 200, &hit));
 	cg_scene_model_find_mutable(&model, 7)->snapshot.resize_boundaries[0].enabled = true;
+	cg_scene_model_find_mutable(&model, 7)->snapshot.resize_boundaries[0].visible = false;
+	assert(!cg_resize_boundary_hit_test(&model, &registry, 400, 200, &hit));
+	cg_scene_model_find_mutable(&model, 7)->snapshot.resize_boundaries[0].visible = true;
 	cg_scene_model_find_mutable(&model, 7)->snapshot.surfaces[0].visible = false;
 	assert(!cg_resize_boundary_hit_test(&model, &registry, 400, 200, &hit));
 
@@ -151,7 +155,7 @@ test_throttle_commit_and_cancel(void)
 			assert(event.type == CG_RESIZE_EVENT_NONE);
 		}
 	}
-	assert(cg_resize_session_commit(&session, &model, &event));
+	assert(cg_resize_session_commit(&session, &model, &registry, &event));
 	assert(event.type == CG_RESIZE_EVENT_BOUNDS_COMMITTED);
 	assert(event.bounds.width == bounds(&model).width);
 	assert(!session.active);
@@ -193,6 +197,31 @@ test_target_change_and_output_resize_cancel(void)
 	assert(!session.active);
 	assert(cg_scene_model_find(&model, 7)->snapshot.revision == 2);
 	assert(!cg_scene_model_find(&model, 7)->snapshot.surfaces[0].visible);
+
+	setup(&model, &registry, CG_SCENE_RESIZE_EDGE_RIGHT);
+	assert(cg_resize_session_begin(&session, &model, &registry, 900, 200, 0));
+	assert(cg_surface_registry_retire(&registry, 7, 200) == CG_SURFACE_REGISTRY_OK);
+	assert(cg_resize_session_update(&session, &model, &registry, 950, 200, 1, &event));
+	assert(event.type == CG_RESIZE_EVENT_CANCELLED);
+	assert(!session.active);
+}
+
+static void
+test_focus_loss_cancel(void)
+{
+	struct cg_scene_model model;
+	struct cg_surface_registry registry;
+	struct cg_resize_session session;
+	struct cg_resize_event event;
+
+	cg_resize_session_init(&session);
+	setup(&model, &registry, CG_SCENE_RESIZE_EDGE_BOTTOM);
+	assert(cg_resize_session_begin(&session, &model, &registry, 500, 500, 0));
+	assert(cg_resize_session_update(&session, &model, &registry, 500, 600, 1, &event));
+	assert(bounds(&model).height == 500);
+	assert(cg_resize_session_cancel(&session, &model, &event));
+	assert(event.type == CG_RESIZE_EVENT_CANCELLED);
+	assert(bounds(&model).height == 400);
 }
 
 int
@@ -202,5 +231,6 @@ main(void)
 	test_all_edges_and_clamping();
 	test_throttle_commit_and_cancel();
 	test_target_change_and_output_resize_cancel();
+	test_focus_loss_cancel();
 	return 0;
 }

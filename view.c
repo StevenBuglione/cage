@@ -10,7 +10,6 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-server-core.h>
@@ -20,53 +19,12 @@
 #include <wlr/util/log.h>
 
 #include "output.h"
-#include "poc_layout.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
-
-void
-view_configure_poc_layout(struct cg_server *server)
-{
-	const char *value = getenv("CAGE_LINGUUM_BROWSER_WIDTH");
-	int width;
-
-	if (!value || !*value) {
-		server->poc_browser_width = 0;
-		return;
-	}
-
-	if (!cg_poc_layout_parse_width(value, &width)) {
-		wlr_log(WLR_ERROR, "Ignoring invalid CAGE_LINGUUM_BROWSER_WIDTH=%s", value);
-		server->poc_browser_width = 0;
-		return;
-	}
-
-	server->poc_browser_width = width;
-}
-
-bool
-view_set_poc_browser_width(struct cg_server *server, int width)
-{
-	char value[16];
-	int parsed_width;
-
-	if (snprintf(value, sizeof(value), "%d", width) < 0 || !cg_poc_layout_parse_width(value, &parsed_width)) {
-		return false;
-	}
-
-	if (server->poc_browser_width == parsed_width) {
-		return true;
-	}
-
-	server->poc_browser_width = parsed_width;
-	view_position_all(server);
-	wlr_log(WLR_INFO, "POC browser width changed to %d", parsed_width);
-	return true;
-}
 
 char *
 view_get_title(struct cg_view *view)
@@ -261,6 +219,24 @@ view_apply_scene_state(struct cg_view *view)
 	}
 }
 
+void
+view_apply_surface_state(struct cg_server *server, cg_scene_id scene_id, cg_surface_id surface_id)
+{
+	struct cg_view *view;
+
+	if (!server || scene_id == 0 || surface_id == 0) {
+		return;
+	}
+	wl_list_for_each (view, &server->views, link) {
+		if (view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED &&
+		    view->surface_policy.identity.scene_id == scene_id &&
+		    view->surface_policy.identity.surface_id == surface_id) {
+			view_apply_scene_state(view);
+			return;
+		}
+	}
+}
+
 static void
 view_apply_scene_order_and_focus(struct cg_server *server, cg_scene_id scene_id)
 {
@@ -318,6 +294,17 @@ view_handle_surface_controller_event(const struct cg_surface_controller_event *e
 	if (!event || !server) {
 		return;
 	}
+	if (server->seat && server->resize_session.active &&
+	    (event->type == CG_SURFACE_CONTROLLER_RESET ||
+	     ((event->type == CG_SURFACE_CONTROLLER_RETIRED ||
+	       event->type == CG_SURFACE_CONTROLLER_SCENE_DESTROYED ||
+	       event->type == CG_SURFACE_CONTROLLER_SCENE_APPLIED ||
+	       event->type == CG_SURFACE_CONTROLLER_OUTPUT_RESIZED) &&
+	      server->resize_session.hit.scene_id == event->scene_id &&
+	      (event->type != CG_SURFACE_CONTROLLER_RETIRED ||
+	       server->resize_session.hit.surface_id == event->surface_id)))) {
+		(void) seat_cancel_resize(server->seat);
+	}
 	wl_list_for_each (view, &server->views, link) {
 		if (view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
 			continue;
@@ -367,6 +354,14 @@ view_position_all(struct cg_server *server)
 	if (server->surface_controller.accepting) {
 		struct wlr_box layout_box;
 		wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
+		if (server->seat && server->resize_session.active) {
+			const struct cg_scene_record *active =
+				cg_scene_model_find(&server->scene_model, server->resize_session.hit.scene_id);
+			if (!active || active->output_width != (uint32_t) layout_box.width ||
+			    active->output_height != (uint32_t) layout_box.height) {
+				(void) seat_cancel_resize(server->seat);
+			}
+		}
 		for (size_t index = 0; index < CG_SCENE_CAPACITY; index++) {
 			if (server->scene_model.scenes[index].occupied) {
 				(void) cg_scene_model_resize_output(
@@ -393,6 +388,12 @@ view_position_all(struct cg_server *server)
 void
 view_unmap(struct cg_view *view)
 {
+	if (view->server->seat && view->server->resize_session.active &&
+	    view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED &&
+	    view->server->resize_session.hit.scene_id == view->surface_policy.identity.scene_id &&
+	    view->server->resize_session.hit.surface_id == view->surface_policy.identity.surface_id) {
+		(void) seat_cancel_resize(view->server->seat);
+	}
 	seat_clear_focus(view->server->seat, view);
 	wl_list_remove(&view->link);
 

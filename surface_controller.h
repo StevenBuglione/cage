@@ -16,6 +16,9 @@ enum cg_surface_controller_event_type {
 	CG_SURFACE_CONTROLLER_SCENE_APPLIED,
 	CG_SURFACE_CONTROLLER_SCENE_DESTROYED,
 	CG_SURFACE_CONTROLLER_OUTPUT_RESIZED,
+	CG_SURFACE_CONTROLLER_BOUNDS_CHANGING,
+	CG_SURFACE_CONTROLLER_BOUNDS_COMMITTED,
+	CG_SURFACE_CONTROLLER_RESIZE_CANCELLED,
 };
 
 struct cg_surface_controller_event {
@@ -23,6 +26,8 @@ struct cg_surface_controller_event {
 	cg_scene_id scene_id;
 	cg_surface_id surface_id;
 	cg_scene_revision revision;
+	cg_resize_boundary_id boundary_id;
+	struct cg_scene_rect bounds;
 };
 
 typedef void (*cg_surface_controller_event_func)(const struct cg_surface_controller_event *event, void *data);
@@ -59,6 +64,8 @@ bool cg_surface_controller_start(struct cg_surface_controller *controller, struc
 uint64_t cg_surface_controller_now(const struct cg_surface_controller *controller);
 bool cg_surface_controller_notify_associated(struct cg_surface_controller *controller,
 					     const struct cg_surface_identity *identity);
+bool cg_surface_controller_notify_resize(struct cg_surface_controller *controller,
+					 const struct cg_resize_event *event);
 void cg_surface_controller_stop(struct cg_surface_controller *controller);
 
 #endif

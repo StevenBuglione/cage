@@ -13,7 +13,7 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/log.h>
 
-#include "poc_resize.h"
+#include "resize_boundary.h"
 #include "scene_model.h"
 #include "surface_controller.h"
 #include "surface_registry.h"
@@ -52,8 +52,7 @@ struct cg_server {
 	struct wl_list outputs; // cg_output::link
 	struct wl_listener new_output;
 	struct wl_listener output_layout_change;
-	int poc_browser_width;
-	struct cg_poc_resize_state poc_resize;
+	struct cg_resize_session resize_session;
 	struct cg_surface_registry surface_registry;
 	struct cg_scene_model scene_model;
 	struct cg_surface_controller surface_controller;

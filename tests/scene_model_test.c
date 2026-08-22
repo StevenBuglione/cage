@@ -191,6 +191,7 @@ test_parent_and_boundary_validation(void)
 		.hit_slop = 10,
 		.cursor = CG_SCENE_RESIZE_CURSOR_COLUMN,
 		.enabled = true,
+		.visible = true,
 	};
 	assert(cg_scene_model_apply(&model, &registry, &snapshot) == CG_SCENE_OK);
 

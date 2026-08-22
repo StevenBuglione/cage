@@ -6,7 +6,6 @@
  * See the LICENSE file accompanying this file.
  */
 
-#include <limits.h>
 #include <string.h>
 
 #include "resize_boundary.h"
@@ -106,7 +105,7 @@ cg_resize_boundary_hit_test(const struct cg_scene_model *model, const struct cg_
 			const struct cg_scene_surface_state *target =
 				cg_scene_snapshot_find_surface(&record->snapshot, boundary->target_surface_id);
 			struct cg_scene_rect resolved;
-			if (!boundary->enabled || !target || !target->visible ||
+			if (!boundary->enabled || !boundary->visible || !target || !target->visible ||
 			    !surface_is_associated(registry, record->snapshot.scene_id, target->surface_id) ||
 			    !cg_scene_model_resolve_surface(model, record->snapshot.scene_id, target->surface_id, &resolved) ||
 			    !point_hits_boundary(boundary, target, resolved, x, y)) {
@@ -194,8 +193,9 @@ active_target(struct cg_resize_session *session, struct cg_scene_model *model,
 	}
 	boundary = find_boundary(&record->snapshot, session->hit.boundary_id);
 	target = cg_scene_snapshot_find_surface_mutable(&record->snapshot, session->hit.surface_id);
-	if (!boundary || !boundary->enabled || boundary->target_surface_id != session->hit.surface_id || !target ||
-	    !target->visible || !surface_is_associated(registry, session->hit.scene_id, session->hit.surface_id)) {
+	if (!boundary || !boundary->enabled || !boundary->visible ||
+	    boundary->target_surface_id != session->hit.surface_id || !target || !target->visible ||
+	    !surface_is_associated(registry, session->hit.scene_id, session->hit.surface_id)) {
 		return NULL;
 	}
 	return target;
@@ -260,7 +260,9 @@ cg_resize_session_update(struct cg_resize_session *session, struct cg_scene_mode
 					 session->maximum_size);
 		break;
 	}
-	if (memcmp(&target->bounds, &next, sizeof(next)) == 0) {
+	set_event(session, CG_RESIZE_EVENT_NONE, next, event_out);
+	if (target->bounds.x == next.x && target->bounds.y == next.y && target->bounds.width == next.width &&
+	    target->bounds.height == next.height) {
 		return true;
 	}
 	target->bounds = next;
@@ -275,22 +277,18 @@ cg_resize_session_update(struct cg_resize_session *session, struct cg_scene_mode
 
 bool
 cg_resize_session_commit(struct cg_resize_session *session, struct cg_scene_model *model,
-			 struct cg_resize_event *event_out)
+			 const struct cg_surface_registry *registry, struct cg_resize_event *event_out)
 {
-	struct cg_scene_record *record;
 	struct cg_scene_surface_state *target;
 	struct cg_scene_rect bounds;
 
 	if (event_out) {
 		memset(event_out, 0, sizeof(*event_out));
 	}
-	if (!session || !session->active || !model) {
+	if (!session || !session->active || !model || !registry) {
 		return false;
 	}
-	record = cg_scene_model_find_mutable(model, session->hit.scene_id);
-	target = record && record->snapshot.revision == session->revision
-			 ? cg_scene_snapshot_find_surface_mutable(&record->snapshot, session->hit.surface_id)
-			 : NULL;
+	target = active_target(session, model, registry);
 	bounds = target ? target->bounds : session->committed_bounds;
 	set_event(session, target ? CG_RESIZE_EVENT_BOUNDS_COMMITTED : CG_RESIZE_EVENT_CANCELLED, bounds, event_out);
 	cg_resize_session_init(session);

@@ -26,9 +26,14 @@ struct observed_events {
 	uint64_t scene_applied;
 	uint64_t scene_destroyed;
 	uint64_t output_resized;
+	uint64_t bounds_changing;
+	uint64_t bounds_committed;
+	uint64_t resize_cancelled;
 	cg_scene_id last_scene_id;
 	cg_surface_id last_surface_id;
 	cg_scene_revision last_revision;
+	cg_resize_boundary_id last_boundary_id;
+	struct cg_scene_rect last_bounds;
 };
 
 static void
@@ -53,6 +58,21 @@ observe_event(const struct cg_surface_controller_event *event, void *data)
 		observed->output_resized++;
 		observed->last_scene_id = event->scene_id;
 		observed->last_revision = event->revision;
+	} else if (event->type == CG_SURFACE_CONTROLLER_BOUNDS_CHANGING ||
+		   event->type == CG_SURFACE_CONTROLLER_BOUNDS_COMMITTED ||
+		   event->type == CG_SURFACE_CONTROLLER_RESIZE_CANCELLED) {
+		if (event->type == CG_SURFACE_CONTROLLER_BOUNDS_CHANGING) {
+			observed->bounds_changing++;
+		} else if (event->type == CG_SURFACE_CONTROLLER_BOUNDS_COMMITTED) {
+			observed->bounds_committed++;
+		} else {
+			observed->resize_cancelled++;
+		}
+		observed->last_scene_id = event->scene_id;
+		observed->last_surface_id = event->surface_id;
+		observed->last_revision = event->revision;
+		observed->last_boundary_id = event->boundary_id;
+		observed->last_bounds = event->bounds;
 	}
 }
 
@@ -244,6 +264,20 @@ main(void)
 	dispatch(event_loop);
 	assert(observed.output_resized == 1);
 	assert(cg_scene_model_find(&scenes, 7)->output_width == 1200);
+	const struct cg_resize_event resize_event = {
+		.type = CG_RESIZE_EVENT_BOUNDS_COMMITTED,
+		.scene_id = 7,
+		.revision = 1,
+		.boundary_id = 55,
+		.surface_id = 102,
+		.bounds = {.x = 400, .y = 0, .width = 800, .height = 800},
+	};
+	assert(cg_surface_controller_notify_resize(&controller, &resize_event));
+	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x83\x00\x38", 8) == 0);
+	assert(observed.bounds_committed == 1);
+	assert(observed.last_boundary_id == 55);
+	assert(observed.last_bounds.width == 800);
 
 	const struct cg_surface_control_destroy_scene destroy_scene = {.scene_id = 7};
 	assert(cg_surface_control_encode_destroy_scene(&destroy_scene, bytes, sizeof(bytes), &size));

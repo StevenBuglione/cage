@@ -168,6 +168,9 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 		break;
 	}
 	case CG_SURFACE_CONTROL_ASSOCIATED:
+	case CG_SURFACE_CONTROL_BOUNDS_CHANGING:
+	case CG_SURFACE_CONTROL_BOUNDS_COMMITTED:
+	case CG_SURFACE_CONTROL_RESIZE_CANCELLED:
 		break;
 	}
 	if (applied) {
@@ -358,6 +361,49 @@ cg_surface_controller_notify_associated(struct cg_surface_controller *controller
 	controller->receive_errors++;
 	disconnect_client(controller);
 	return false;
+}
+
+bool
+cg_surface_controller_notify_resize(struct cg_surface_controller *controller, const struct cg_resize_event *event)
+{
+	struct cg_surface_controller_event controller_event;
+	uint8_t bytes[CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE];
+	size_t size;
+	ssize_t sent;
+
+	if (!controller || !controller->accepting || controller->client_fd < 0 ||
+	    !cg_surface_control_encode_resize_event(event, bytes, sizeof(bytes), &size)) {
+		return false;
+	}
+	sent = send(controller->client_fd, bytes, size, MSG_NOSIGNAL);
+	if (sent != (ssize_t) size) {
+		controller->receive_errors++;
+		disconnect_client(controller);
+		return false;
+	}
+	memset(&controller_event, 0, sizeof(controller_event));
+	controller_event.scene_id = event->scene_id;
+	controller_event.surface_id = event->surface_id;
+	controller_event.revision = event->revision;
+	controller_event.boundary_id = event->boundary_id;
+	controller_event.bounds = event->bounds;
+	switch (event->type) {
+	case CG_RESIZE_EVENT_BOUNDS_CHANGING:
+		controller_event.type = CG_SURFACE_CONTROLLER_BOUNDS_CHANGING;
+		break;
+	case CG_RESIZE_EVENT_BOUNDS_COMMITTED:
+		controller_event.type = CG_SURFACE_CONTROLLER_BOUNDS_COMMITTED;
+		break;
+	case CG_RESIZE_EVENT_CANCELLED:
+		controller_event.type = CG_SURFACE_CONTROLLER_RESIZE_CANCELLED;
+		break;
+	case CG_RESIZE_EVENT_NONE:
+		return false;
+	}
+	if (controller->event) {
+		controller->event(&controller_event, controller->event_data);
+	}
+	return true;
 }
 
 void

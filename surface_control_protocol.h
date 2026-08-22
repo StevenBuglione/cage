@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "scene_model.h"
+#include "resize_boundary.h"
 #include "surface_registry.h"
 
 #define CG_SURFACE_CONTROL_VERSION 1
@@ -17,6 +18,7 @@
 #define CG_SURFACE_CONTROL_CREATE_SCENE_SIZE 32
 #define CG_SURFACE_CONTROL_DESTROY_SCENE_SIZE 16
 #define CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE 32
+#define CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE 56
 #define CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE 48
 #define CG_SURFACE_CONTROL_SURFACE_STATE_SIZE 64
 #define CG_SURFACE_CONTROL_RESIZE_BOUNDARY_SIZE 40
@@ -35,6 +37,9 @@ enum cg_surface_control_message_type {
 	CG_SURFACE_CONTROL_APPLY_SCENE = 6,
 	CG_SURFACE_CONTROL_RESIZE_OUTPUT = 7,
 	CG_SURFACE_CONTROL_ASSOCIATED = 0x81,
+	CG_SURFACE_CONTROL_BOUNDS_CHANGING = 0x82,
+	CG_SURFACE_CONTROL_BOUNDS_COMMITTED = 0x83,
+	CG_SURFACE_CONTROL_RESIZE_CANCELLED = 0x84,
 };
 
 enum cg_surface_control_parse_result {
@@ -99,5 +104,7 @@ bool cg_surface_control_encode_apply_scene(const struct cg_scene_snapshot *snaps
 					   size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_resize_output(const struct cg_surface_control_resize_output *request, uint8_t *bytes_out,
 					     size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
+					    size_t *size_out);
 
 #endif

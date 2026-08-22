@@ -36,7 +36,6 @@
 #endif
 
 #include "output.h"
-#include "poc_resize.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
@@ -45,6 +44,59 @@
 #endif
 
 static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
+
+static const char *
+resize_cursor_name(enum cg_scene_resize_cursor cursor)
+{
+	return cursor == CG_SCENE_RESIZE_CURSOR_ROW ? "row-resize" : "col-resize";
+}
+
+static void
+seat_show_resize_cursor(struct cg_seat *seat, enum cg_scene_resize_cursor cursor)
+{
+	if (!seat || !seat->cursor || !seat->xcursor_manager) {
+		return;
+	}
+	if (!seat->resize_cursor_visible || seat->resize_cursor != cursor) {
+		wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, resize_cursor_name(cursor));
+	}
+	seat->resize_cursor_visible = true;
+	seat->resize_cursor = cursor;
+}
+
+static void
+seat_hide_resize_cursor(struct cg_seat *seat)
+{
+	if (!seat || !seat->resize_cursor_visible) {
+		return;
+	}
+	seat->resize_cursor_visible = false;
+	seat->resize_cursor = 0;
+	wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, DEFAULT_XCURSOR);
+}
+
+static void
+seat_emit_resize_event(struct cg_seat *seat, const struct cg_resize_event *event)
+{
+	if (event && event->type != CG_RESIZE_EVENT_NONE) {
+		(void) cg_surface_controller_notify_resize(&seat->server->surface_controller, event);
+	}
+}
+
+bool
+seat_cancel_resize(struct cg_seat *seat)
+{
+	struct cg_resize_event event;
+
+	if (!seat || !seat->server->resize_session.active ||
+	    !cg_resize_session_cancel(&seat->server->resize_session, &seat->server->scene_model, &event)) {
+		return false;
+	}
+	view_apply_surface_state(seat->server, event.scene_id, event.surface_id);
+	seat_hide_resize_cursor(seat);
+	seat_emit_resize_event(seat, &event);
+	return true;
+}
 
 /* XDG toplevels may have nested surfaces, such as popup windows for context
  * menus or tooltips. This function tests if any of those are underneath the
@@ -200,6 +252,7 @@ handle_pointer_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_pointer *pointer = wl_container_of(listener, pointer, destroy);
 	struct cg_seat *seat = pointer->seat;
+	(void) seat_cancel_resize(seat);
 
 	wl_list_remove(&pointer->link);
 	wlr_cursor_detach_input_device(seat->cursor, &pointer->pointer->base);
@@ -498,7 +551,7 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 
 	/* This can be sent by any client, so we check to make sure
 	 * this one actually has pointer focus first. */
-	if (focused_client == event->seat_client->client) {
+	if (!seat->resize_cursor_visible && focused_client == event->seat_client->client) {
 		wlr_cursor_set_surface(seat->cursor, event->surface, event->hotspot_x, event->hotspot_y);
 	}
 }
@@ -606,8 +659,10 @@ handle_cursor_axis(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_axis);
 	struct wlr_pointer_axis_event *event = data;
 
-	wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
-				     event->delta_discrete, event->source, event->relative_direction);
+	if (!seat->server->resize_session.active) {
+		wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
+					     event->delta_discrete, event->source, event->relative_direction);
+	}
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
@@ -617,28 +672,24 @@ handle_cursor_button(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_button);
 	struct wlr_pointer_button_event *event = data;
 	struct cg_server *server = seat->server;
-	struct wlr_box layout_box;
-
-	wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
-	struct cg_poc_rect output = {
-		.x = layout_box.x,
-		.y = layout_box.y,
-		.width = layout_box.width,
-		.height = layout_box.height,
-	};
 
 	if (event->button == BTN_LEFT && event->state == WL_POINTER_BUTTON_STATE_PRESSED &&
-	    cg_poc_resize_begin(&server->poc_resize, output, server->poc_browser_width, seat->cursor->x,
-				seat->cursor->y)) {
+	    cg_resize_session_begin(&server->resize_session, &server->scene_model, &server->surface_registry,
+				    seat->cursor->x, seat->cursor->y, event->time_msec)) {
 		wlr_seat_pointer_clear_focus(seat->seat);
-		wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, "col-resize");
+		seat_show_resize_cursor(seat, server->resize_session.hit.cursor);
 		wlr_idle_notifier_v1_notify_activity(server->idle, seat->seat);
 		return;
 	}
-	if (event->button == BTN_LEFT && server->poc_resize.active) {
-		if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
-			cg_poc_resize_end(&server->poc_resize);
-			wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, DEFAULT_XCURSOR);
+	if (server->resize_session.active) {
+		if (event->button == BTN_LEFT && event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
+			struct cg_resize_event resize_event;
+			if (cg_resize_session_commit(&server->resize_session, &server->scene_model,
+						     &server->surface_registry, &resize_event)) {
+				view_apply_surface_state(server, resize_event.scene_id, resize_event.surface_id);
+				seat_emit_resize_event(seat, &resize_event);
+			}
+			seat_hide_resize_cursor(seat);
 		}
 		wlr_idle_notifier_v1_notify_activity(server->idle, seat->seat);
 		return;
@@ -658,14 +709,30 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, doubl
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct wlr_surface *surface = NULL;
 	struct cg_server *server = seat->server;
-	int width;
+	struct cg_resize_event resize_event;
+	struct cg_resize_hit resize_hit;
 
-	if (cg_poc_resize_update(&server->poc_resize, seat->cursor->x, &width)) {
-		view_set_poc_browser_width(server, width);
+	if (server->resize_session.active) {
+		if (cg_resize_session_update(&server->resize_session, &server->scene_model, &server->surface_registry,
+					     seat->cursor->x, seat->cursor->y, time_msec, &resize_event)) {
+			view_apply_surface_state(server, resize_event.scene_id, resize_event.surface_id);
+			seat_emit_resize_event(seat, &resize_event);
+			if (resize_event.type == CG_RESIZE_EVENT_CANCELLED) {
+				seat_hide_resize_cursor(seat);
+			}
+		}
 		wlr_seat_pointer_clear_focus(wlr_seat);
 		wlr_idle_notifier_v1_notify_activity(server->idle, seat->seat);
 		return;
 	}
+	if (cg_resize_boundary_hit_test(&server->scene_model, &server->surface_registry, seat->cursor->x,
+					seat->cursor->y, &resize_hit)) {
+		seat_show_resize_cursor(seat, resize_hit.cursor);
+		wlr_seat_pointer_clear_focus(wlr_seat);
+		wlr_idle_notifier_v1_notify_activity(server->idle, seat->seat);
+		return;
+	}
+	seat_hide_resize_cursor(seat);
 
 	struct cg_view *view = desktop_view_at(server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
 	if (!view) {
@@ -975,6 +1042,12 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	if (!view || !view_accepts_input(view) || prev_view == view) {
 		return;
 	}
+	if (server->resize_session.active &&
+	    (view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED ||
+	     server->resize_session.hit.scene_id != view->surface_policy.identity.scene_id ||
+	     server->resize_session.hit.surface_id != view->surface_policy.identity.surface_id)) {
+		(void) seat_cancel_resize(seat);
+	}
 
 #if CAGE_HAS_XWAYLAND
 	if (view->type == CAGE_XWAYLAND_VIEW) {
@@ -1020,6 +1093,11 @@ seat_clear_focus(struct cg_seat *seat, struct cg_view *view)
 {
 	if (!seat || !view || seat_get_focus(seat) != view) {
 		return;
+	}
+	if (seat->server->resize_session.active && view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED &&
+	    seat->server->resize_session.hit.scene_id == view->surface_policy.identity.scene_id &&
+	    seat->server->resize_session.hit.surface_id == view->surface_policy.identity.surface_id) {
+		(void) seat_cancel_resize(seat);
 	}
 	view_activate(view, false);
 	wlr_seat_keyboard_clear_focus(seat->seat);

@@ -384,8 +384,8 @@ main(int argc, char *argv[])
 	wl_list_init(&server.outputs);
 	cg_surface_registry_init(&server.surface_registry);
 	cg_scene_model_init(&server.scene_model);
+	cg_resize_session_init(&server.resize_session);
 	cg_surface_controller_init(&server.surface_controller);
-	view_configure_poc_layout(&server);
 
 	server.output_layout = wlr_output_layout_create(server.wl_display);
 	if (!server.output_layout) {

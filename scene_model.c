@@ -45,7 +45,7 @@ boundary_equal(const struct cg_scene_resize_boundary *left, const struct cg_scen
 	return left->boundary_id == right->boundary_id && left->target_surface_id == right->target_surface_id &&
 	       left->edge == right->edge && left->minimum_size == right->minimum_size &&
 	       left->maximum_size == right->maximum_size && left->hit_slop == right->hit_slop &&
-	       left->cursor == right->cursor && left->enabled == right->enabled;
+	       left->cursor == right->cursor && left->enabled == right->enabled && left->visible == right->visible;
 }
 
 static bool

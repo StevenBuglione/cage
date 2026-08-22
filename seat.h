@@ -27,6 +27,8 @@ struct cg_seat {
 
 	struct wlr_cursor *cursor;
 	struct wlr_xcursor_manager *xcursor_manager;
+	bool resize_cursor_visible;
+	enum cg_scene_resize_cursor resize_cursor;
 	struct wl_listener cursor_motion_relative;
 	struct wl_listener cursor_motion_absolute;
 	struct wl_listener cursor_button;
@@ -89,6 +91,7 @@ struct cg_drag_icon {
 
 struct cg_seat *seat_create(struct cg_server *server, struct wlr_backend *backend);
 void seat_destroy(struct cg_seat *seat);
+bool seat_cancel_resize(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);
 void seat_clear_focus(struct cg_seat *seat, struct cg_view *view);

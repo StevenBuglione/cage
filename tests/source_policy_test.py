@@ -10,6 +10,7 @@ assert match, "cage_sources block is missing"
 source_names = set(re.findall(r"'([^']+\.[ch])'", match.group(1)))
 
 required_sources = {
+    "resize_boundary.c",
     "scene_model.c",
     "surface_control_protocol.c",
     "surface_controller.c",
@@ -21,6 +22,9 @@ required_sources = {
 assert required_sources <= source_names, "framework registry source is missing from Cage"
 assert not {"poc_layout_controller.c", "poc_layout_socket.c"} & source_names, (
     "the legacy raw-width controller must remain test-only"
+)
+assert not {"poc_layout.c", "poc_resize.c"} & source_names, (
+    "browser-specific POC layout and resize code must remain test-only"
 )
 
 production_files = [root / name for name in sorted(source_names) if (root / name).is_file()]
@@ -43,10 +47,12 @@ for forbidden in (
     "cg_poc_layout_classify_title",
     "view_update_poc_role",
     "CAGE_LINGUUM_LAYOUT_SOCKET",
+    "CAGE_LINGUUM_BROWSER_WIDTH",
+    "cg_poc_resize",
+    "poc_browser_width",
+    "cg_poc_layout_rect",
 ):
     assert forbidden not in production, f"production Cage contains legacy identity: {forbidden}"
 
 fixture = (root / "tests" / "poc_title_fixture.c").read_text(encoding="utf-8")
 assert "Linguum Workspace" in fixture and "Linguum Browser Controls" in fixture
-view_source = (root / "view.c").read_text(encoding="utf-8")
-assert "cg_poc_layout_rect" not in view_source, "production view placement must use the scene model"

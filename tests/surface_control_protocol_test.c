@@ -136,6 +136,7 @@ scene_snapshot(void)
 		.hit_slop = 10,
 		.cursor = CG_SCENE_RESIZE_CURSOR_COLUMN,
 		.enabled = true,
+		.visible = true,
 	};
 	return snapshot;
 }
@@ -198,6 +199,7 @@ test_scene_control_round_trip(void)
 	assert(parsed.scene_snapshot.surfaces[1].modal);
 	assert(parsed.scene_snapshot.resize_boundaries[0].boundary_id == 55);
 	assert(parsed.scene_snapshot.resize_boundaries[0].maximum_size == 1200);
+	assert(parsed.scene_snapshot.resize_boundaries[0].visible);
 }
 
 static void
@@ -242,6 +244,31 @@ test_scene_message_rejection_and_capacity(void)
 	assert(!cg_surface_control_encode_create_scene(NULL, bytes, sizeof(bytes), &size));
 	assert(!cg_surface_control_encode_destroy_scene(NULL, bytes, sizeof(bytes), &size));
 	assert(!cg_surface_control_encode_resize_output(NULL, bytes, sizeof(bytes), &size));
+}
+
+static void
+test_resize_event_golden_vector(void)
+{
+	struct cg_resize_event event = {
+		.type = CG_RESIZE_EVENT_BOUNDS_COMMITTED,
+		.scene_id = 7,
+		.revision = 9,
+		.boundary_id = 55,
+		.surface_id = 200,
+		.bounds = {.x = -10, .y = 20, .width = 640, .height = 480},
+	};
+	struct cg_surface_control_message parsed;
+	uint8_t bytes[CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE];
+	size_t size;
+
+	assert(cg_surface_control_encode_resize_event(&event, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x83\x00\x38", 8) == 0);
+	assert(memcmp(bytes + 32, "\x00\x00\x00\x00\x00\x00\x00\xc8", 8) == 0);
+	assert(memcmp(bytes + 40, "\xff\xff\xff\xf6\x00\x00\x00\x14", 8) == 0);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_UNKNOWN_TYPE);
+	event.type = CG_RESIZE_EVENT_NONE;
+	assert(!cg_surface_control_encode_resize_event(&event, bytes, sizeof(bytes), &size));
 }
 
 static void
@@ -332,6 +359,7 @@ main(void)
 	test_associated_golden_vector();
 	test_scene_control_round_trip();
 	test_scene_message_rejection_and_capacity();
+	test_resize_event_golden_vector();
 	test_size_and_header_rejection();
 	test_register_field_rejection();
 	test_encoder_rejection();

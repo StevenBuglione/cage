@@ -57,7 +57,7 @@ bool cg_resize_session_update(struct cg_resize_session *session, struct cg_scene
 			      const struct cg_surface_registry *registry, double x, double y, uint64_t now_ms,
 			      struct cg_resize_event *event_out);
 bool cg_resize_session_commit(struct cg_resize_session *session, struct cg_scene_model *model,
-			      struct cg_resize_event *event_out);
+			      const struct cg_surface_registry *registry, struct cg_resize_event *event_out);
 bool cg_resize_session_cancel(struct cg_resize_session *session, struct cg_scene_model *model,
 			      struct cg_resize_event *event_out);
 

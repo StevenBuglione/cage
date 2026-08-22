@@ -57,6 +57,7 @@ struct cg_scene_resize_boundary {
 	uint32_t hit_slop;
 	enum cg_scene_resize_cursor cursor;
 	bool enabled;
+	bool visible;
 };
 
 struct cg_scene_snapshot {

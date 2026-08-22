@@ -263,7 +263,7 @@ cg_surface_control_parse(const uint8_t *bytes, size_t size, struct cg_surface_co
 		}
 		for (uint16_t index = 0; index < snapshot->resize_boundary_count; index++) {
 			struct cg_scene_resize_boundary *boundary = &snapshot->resize_boundaries[index];
-			if ((bytes[offset + 18] & ~1u) != 0 || bytes[offset + 19] != 0 ||
+			if ((bytes[offset + 18] & ~3u) != 0 || bytes[offset + 19] != 0 ||
 			    !bytes_are_zero(bytes + offset + 32, 8)) {
 				memset(message_out, 0, sizeof(*message_out));
 				return CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED;
@@ -273,6 +273,7 @@ cg_surface_control_parse(const uint8_t *bytes, size_t size, struct cg_surface_co
 			boundary->edge = (enum cg_scene_resize_edge) bytes[offset + 16];
 			boundary->cursor = (enum cg_scene_resize_cursor) bytes[offset + 17];
 			boundary->enabled = (bytes[offset + 18] & 1u) != 0;
+			boundary->visible = (bytes[offset + 18] & 2u) != 0;
 			boundary->minimum_size = read_u32(bytes + offset + 20);
 			boundary->maximum_size = read_u32(bytes + offset + 24);
 			boundary->hit_slop = read_u32(bytes + offset + 28);
@@ -381,7 +382,7 @@ cg_surface_control_encode_apply_scene(const struct cg_scene_snapshot *snapshot, 
 		write_u64(bytes_out + offset + 8, boundary->target_surface_id);
 		bytes_out[offset + 16] = (uint8_t) boundary->edge;
 		bytes_out[offset + 17] = (uint8_t) boundary->cursor;
-		bytes_out[offset + 18] = boundary->enabled ? 1 : 0;
+		bytes_out[offset + 18] = (boundary->enabled ? 1u : 0u) | (boundary->visible ? 2u : 0u);
 		write_u32(bytes_out + offset + 20, boundary->minimum_size);
 		write_u32(bytes_out + offset + 24, boundary->maximum_size);
 		write_u32(bytes_out + offset + 28, boundary->hit_slop);
@@ -407,6 +408,44 @@ cg_surface_control_encode_resize_output(const struct cg_surface_control_resize_o
 	write_u32(bytes_out + 24, request->output_width);
 	write_u32(bytes_out + 28, request->output_height);
 	*size_out = CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE;
+	return true;
+}
+
+bool
+cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
+				       size_t *size_out)
+{
+	enum cg_surface_control_message_type type;
+
+	if (!event || event->scene_id == 0 || event->revision == 0 || event->boundary_id == 0 ||
+	    event->surface_id == 0 || event->bounds.width <= 0 || event->bounds.height <= 0 || !bytes_out ||
+	    capacity < CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE || !size_out) {
+		return false;
+	}
+	switch (event->type) {
+	case CG_RESIZE_EVENT_BOUNDS_CHANGING:
+		type = CG_SURFACE_CONTROL_BOUNDS_CHANGING;
+		break;
+	case CG_RESIZE_EVENT_BOUNDS_COMMITTED:
+		type = CG_SURFACE_CONTROL_BOUNDS_COMMITTED;
+		break;
+	case CG_RESIZE_EVENT_CANCELLED:
+		type = CG_SURFACE_CONTROL_RESIZE_CANCELLED;
+		break;
+	case CG_RESIZE_EVENT_NONE:
+		return false;
+	}
+	memset(bytes_out, 0, CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE);
+	write_header(bytes_out, type, CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE);
+	write_u64(bytes_out + 8, event->scene_id);
+	write_u64(bytes_out + 16, event->revision);
+	write_u64(bytes_out + 24, event->boundary_id);
+	write_u64(bytes_out + 32, event->surface_id);
+	write_i32(bytes_out + 40, event->bounds.x);
+	write_i32(bytes_out + 44, event->bounds.y);
+	write_i32(bytes_out + 48, event->bounds.width);
+	write_i32(bytes_out + 52, event->bounds.height);
+	*size_out = CG_SURFACE_CONTROL_BOUNDS_EVENT_SIZE;
 	return true;
 }
 
