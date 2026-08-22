@@ -377,7 +377,7 @@ view_position_all(struct cg_server *server)
 						.output_height = (uint32_t) layout_box.height,
 					};
 					(void) cg_surface_controller_notify_output_changed(&server->surface_controller,
-										   &event);
+											   &event);
 				}
 			}
 		}
