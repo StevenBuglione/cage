@@ -159,8 +159,8 @@ setup_poc_layout_socket(struct cg_server *server, struct wl_event_loop *event_lo
 		return false;
 	}
 
-	server->poc_layout_source = wl_event_loop_add_fd(
-		event_loop, server->poc_layout_socket.fd, WL_EVENT_READABLE, poc_layout_handler, server);
+	server->poc_layout_source = wl_event_loop_add_fd(event_loop, server->poc_layout_socket.fd, WL_EVENT_READABLE,
+							 poc_layout_handler, server);
 	if (!server->poc_layout_source) {
 		cg_poc_layout_socket_close(&server->poc_layout_socket);
 		return false;

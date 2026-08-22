@@ -67,15 +67,14 @@ cg_poc_layout_socket_open(struct cg_poc_layout_socket *layout_socket, const char
 	strcpy(layout_socket->path, path);
 	return true;
 
-fail:
-	{
-		int saved_errno = errno;
-		close(layout_socket->fd);
-		layout_socket->fd = -1;
-		unlink(path);
-		errno = saved_errno;
-		return false;
-	}
+fail: {
+	int saved_errno = errno;
+	close(layout_socket->fd);
+	layout_socket->fd = -1;
+	unlink(path);
+	errno = saved_errno;
+	return false;
+}
 }
 
 enum cg_poc_layout_receive_result
