@@ -18,6 +18,7 @@
 #define POC_BROWSER_MIN_WIDTH 360
 #define POC_BROWSER_MAX_WIDTH 1200
 #define POC_WORKSPACE_MIN_WIDTH 400
+#define POC_LAYOUT_MESSAGE_CAPACITY 32
 
 bool
 cg_poc_layout_parse_width(const char *value, int *width_out)
@@ -36,6 +37,39 @@ cg_poc_layout_parse_width(const char *value, int *width_out)
 
 	*width_out = (int) width;
 	return true;
+}
+
+bool
+cg_poc_layout_parse_message(const char *message, size_t size, int *width_out)
+{
+	char value[POC_LAYOUT_MESSAGE_CAPACITY];
+
+	if (!message || !width_out || size == 0 || size >= sizeof(value) || memchr(message, '\0', size)) {
+		return false;
+	}
+
+	memcpy(value, message, size);
+	value[size] = '\0';
+	return cg_poc_layout_parse_width(value, width_out);
+}
+
+bool
+cg_poc_layout_socket_path_valid(const char *path, const char *runtime_dir, size_t path_capacity)
+{
+	size_t runtime_length;
+
+	if (!path || !*path || !runtime_dir || !*runtime_dir || path_capacity == 0) {
+		return false;
+	}
+
+	runtime_length = strlen(runtime_dir);
+	if (runtime_dir[0] != '/' || runtime_dir[runtime_length - 1] == '/' || path[0] != '/' ||
+	    strlen(path) >= path_capacity) {
+		return false;
+	}
+
+	return strncmp(path, runtime_dir, runtime_length) == 0 && path[runtime_length] == '/' &&
+	       path[runtime_length + 1] != '\0';
 }
 
 enum cg_poc_surface_role

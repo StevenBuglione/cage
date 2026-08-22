@@ -48,6 +48,9 @@ struct cg_server {
 	struct wl_listener new_output;
 	struct wl_listener output_layout_change;
 	int poc_browser_width;
+	int poc_layout_fd;
+	char poc_layout_socket_path[108];
+	struct wl_event_source *poc_layout_source;
 
 	struct wl_listener xdg_toplevel_decoration;
 	struct wl_listener new_xdg_toplevel;

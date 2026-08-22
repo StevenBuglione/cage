@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "poc_layout.h"
 
@@ -11,6 +12,24 @@ assert_rect(struct cg_poc_rect actual, int x, int y, int width, int height)
 	assert(actual.y == y);
 	assert(actual.width == width);
 	assert(actual.height == height);
+}
+
+static void
+test_socket_path_validation(void)
+{
+	const char *path = "/run/user/1000/linguum-cage-layout.sock";
+
+	assert(cg_poc_layout_socket_path_valid(path, "/run/user/1000", 108));
+	assert(!cg_poc_layout_socket_path_valid(NULL, "/run/user/1000", 108));
+	assert(!cg_poc_layout_socket_path_valid(path, NULL, 108));
+	assert(!cg_poc_layout_socket_path_valid(path, "", 108));
+	assert(!cg_poc_layout_socket_path_valid(path, "run/user/1000", 108));
+	assert(!cg_poc_layout_socket_path_valid(path, "/run/user/1000/", 108));
+	assert(!cg_poc_layout_socket_path_valid("/run/user/10000/socket", "/run/user/1000", 108));
+	assert(!cg_poc_layout_socket_path_valid("/run/user/1000", "/run/user/1000", 108));
+	assert(!cg_poc_layout_socket_path_valid("/run/user/1000/", "/run/user/1000", 108));
+	assert(!cg_poc_layout_socket_path_valid(path, "/run/user/1000", strlen(path)));
+	assert(!cg_poc_layout_socket_path_valid(path, "/run/user/1000", 0));
 }
 
 static void
@@ -31,6 +50,24 @@ test_width_parser(void)
 	assert(!cg_poc_layout_parse_width("1201", &width));
 	assert(!cg_poc_layout_parse_width("620px", &width));
 	assert(!cg_poc_layout_parse_width("620", NULL));
+}
+
+static void
+test_layout_message_parser(void)
+{
+	char oversized[32];
+	const char embedded_null[] = {'6', '2', '0', '\0', '7'};
+	int width = 0;
+
+	memset(oversized, '6', sizeof(oversized));
+	assert(cg_poc_layout_parse_message("620", 3, &width));
+	assert(width == 620);
+	assert(!cg_poc_layout_parse_message(NULL, 3, &width));
+	assert(!cg_poc_layout_parse_message("", 0, &width));
+	assert(!cg_poc_layout_parse_message("620", 3, NULL));
+	assert(!cg_poc_layout_parse_message("620px", 5, &width));
+	assert(!cg_poc_layout_parse_message(embedded_null, sizeof(embedded_null), &width));
+	assert(!cg_poc_layout_parse_message(oversized, sizeof(oversized), &width));
 }
 
 static void
@@ -101,6 +138,8 @@ int
 main(void)
 {
 	test_width_parser();
+	test_layout_message_parser();
+	test_socket_path_validation();
 	test_title_classification();
 	test_three_surface_rectangles();
 	test_narrow_output_fallback();
