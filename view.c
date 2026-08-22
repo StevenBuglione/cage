@@ -299,6 +299,24 @@ view_handle_surface_controller_event(const struct cg_surface_controller_event *e
 	if (!event || !server) {
 		return;
 	}
+	if (event->type == CG_SURFACE_CONTROLLER_SCENE_CREATED) {
+		struct wlr_box layout_box;
+		struct cg_scene_record *record = cg_scene_model_find(&server->scene_model, event->scene_id);
+		wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
+		if (!record || layout_box.width <= 0 || layout_box.height <= 0) {
+			return;
+		}
+		(void) cg_scene_model_resize_output(&server->scene_model, event->scene_id, (uint32_t) layout_box.width,
+						    (uint32_t) layout_box.height);
+		const struct cg_surface_control_resize_output output = {
+			.scene_id = event->scene_id,
+			.output_id = record->snapshot.output_id,
+			.output_width = (uint32_t) layout_box.width,
+			.output_height = (uint32_t) layout_box.height,
+		};
+		(void) cg_surface_controller_notify_output_changed(&server->surface_controller, &output);
+		return;
+	}
 	if (server->seat && server->resize_session.active &&
 	    (event->type == CG_SURFACE_CONTROLLER_RESET ||
 	     ((event->type == CG_SURFACE_CONTROLLER_RETIRED || event->type == CG_SURFACE_CONTROLLER_SCENE_DESTROYED ||

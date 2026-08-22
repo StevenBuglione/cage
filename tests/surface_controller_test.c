@@ -23,6 +23,7 @@ test_now(void *data)
 struct observed_events {
 	uint64_t resets;
 	uint64_t retired;
+	uint64_t scene_created;
 	uint64_t scene_applied;
 	uint64_t scene_destroyed;
 	uint64_t output_resized;
@@ -47,6 +48,9 @@ observe_event(const struct cg_surface_controller_event *event, void *data)
 		observed->retired++;
 		observed->last_scene_id = event->scene_id;
 		observed->last_surface_id = event->surface_id;
+	} else if (event->type == CG_SURFACE_CONTROLLER_SCENE_CREATED) {
+		observed->scene_created++;
+		observed->last_scene_id = event->scene_id;
 	} else if (event->type == CG_SURFACE_CONTROLLER_SCENE_APPLIED) {
 		observed->scene_applied++;
 		observed->last_scene_id = event->scene_id;
@@ -241,6 +245,7 @@ main(void)
 	send_bytes(client, bytes, size);
 	dispatch(event_loop);
 	assert(cg_scene_model_find(&scenes, 7));
+	assert(observed.scene_created == 1 && observed.last_scene_id == 7);
 
 	register_request.surface_id = 102;
 	register_request.token.bytes[0] = 3;
