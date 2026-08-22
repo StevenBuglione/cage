@@ -139,7 +139,8 @@ poc_layout_handler(int fd, uint32_t mask, void *data)
 		return 0;
 	}
 
-	if (!cg_poc_layout_parse_message(message, (size_t) size, &width) || !view_set_poc_browser_width(server, width)) {
+	if (!cg_poc_layout_parse_message(message, (size_t) size, &width) ||
+	    !view_set_poc_browser_width(server, width)) {
 		wlr_log(WLR_ERROR, "Ignoring invalid POC layout message (%zd bytes)", size);
 	}
 	return 0;
@@ -178,8 +179,8 @@ setup_poc_layout_socket(struct cg_server *server, struct wl_event_loop *event_lo
 	}
 
 	strcpy(server->poc_layout_socket_path, path);
-	server->poc_layout_source = wl_event_loop_add_fd(
-		event_loop, server->poc_layout_fd, WL_EVENT_READABLE, poc_layout_handler, server);
+	server->poc_layout_source =
+		wl_event_loop_add_fd(event_loop, server->poc_layout_fd, WL_EVENT_READABLE, poc_layout_handler, server);
 	if (!server->poc_layout_source) {
 		close(server->poc_layout_fd);
 		server->poc_layout_fd = -1;
