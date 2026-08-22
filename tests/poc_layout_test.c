@@ -123,6 +123,20 @@ test_minimum_target_dimensions(void)
 }
 
 static void
+test_fullscreen_preserves_poc_slot(void)
+{
+	const struct cg_poc_rect output = {.x = 0, .y = 0, .width = 1920, .height = 1080};
+	struct cg_poc_rect target;
+
+	assert(cg_poc_layout_rect(output, 720, CG_POC_SURFACE_WORKSPACE, &target));
+	assert_rect(target, 0, 0, 1200, 1080);
+	assert(cg_poc_layout_rect(output, 720, CG_POC_SURFACE_CONTROLS, &target));
+	assert_rect(target, 1200, 0, 720, 40);
+	assert(cg_poc_layout_rect(output, 720, CG_POC_SURFACE_BROWSER, &target));
+	assert_rect(target, 1200, 40, 720, 1040);
+}
+
+static void
 test_inactive_layout(void)
 {
 	const struct cg_poc_rect output = {.x = 0, .y = 0, .width = 1440, .height = 900};
@@ -144,6 +158,7 @@ main(void)
 	test_three_surface_rectangles();
 	test_narrow_output_fallback();
 	test_minimum_target_dimensions();
+	test_fullscreen_preserves_poc_slot();
 	test_inactive_layout();
 	return 0;
 }
