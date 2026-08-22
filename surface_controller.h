@@ -32,8 +32,8 @@ struct cg_surface_controller {
 
 void cg_surface_controller_init(struct cg_surface_controller *controller);
 bool cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_event_loop *event_loop,
-	const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
-	cg_surface_controller_now_func now, void *now_data);
+				 const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
+				 cg_surface_controller_now_func now, void *now_data);
 void cg_surface_controller_stop(struct cg_surface_controller *controller);
 
 #endif

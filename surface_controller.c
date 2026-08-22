@@ -43,8 +43,7 @@ set_descriptor_flags(int fd)
 	int descriptor_flags = fcntl(fd, F_GETFD);
 	int status_flags = fcntl(fd, F_GETFL);
 
-	return descriptor_flags >= 0 && status_flags >= 0 &&
-	       fcntl(fd, F_SETFD, descriptor_flags | FD_CLOEXEC) >= 0 &&
+	return descriptor_flags >= 0 && status_flags >= 0 && fcntl(fd, F_SETFD, descriptor_flags | FD_CLOEXEC) >= 0 &&
 	       fcntl(fd, F_SETFL, status_flags | O_NONBLOCK) >= 0;
 }
 
@@ -86,9 +85,8 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 			controller->registry, &message->registration, controller->now(controller->now_data));
 		break;
 	case CG_SURFACE_CONTROL_UNREGISTER:
-		controller->last_registry_result =
-			cg_surface_registry_retire(controller->registry, message->unregistration.scene_id,
-						   message->unregistration.surface_id);
+		controller->last_registry_result = cg_surface_registry_retire(
+			controller->registry, message->unregistration.scene_id, message->unregistration.surface_id);
 		break;
 	case CG_SURFACE_CONTROL_RESET:
 		cg_surface_registry_reset(controller->registry);
@@ -184,8 +182,9 @@ handle_listener(int fd, uint32_t mask, void *data)
 	}
 
 	controller->client_fd = client_fd;
-	controller->client_source = wl_event_loop_add_fd(controller->event_loop, client_fd,
-		WL_EVENT_READABLE | WL_EVENT_HANGUP | WL_EVENT_ERROR, handle_client, controller);
+	controller->client_source =
+		wl_event_loop_add_fd(controller->event_loop, client_fd,
+				     WL_EVENT_READABLE | WL_EVENT_HANGUP | WL_EVENT_ERROR, handle_client, controller);
 	if (!controller->client_source) {
 		close(controller->client_fd);
 		controller->client_fd = -1;
@@ -209,8 +208,8 @@ cg_surface_controller_init(struct cg_surface_controller *controller)
 
 bool
 cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_event_loop *event_loop,
-	const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
-	cg_surface_controller_now_func now, void *now_data)
+			    const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
+			    cg_surface_controller_now_func now, void *now_data)
 {
 	struct sockaddr_un address = {.sun_family = AF_UNIX};
 
@@ -237,8 +236,8 @@ cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_
 	controller->now = now ? now : monotonic_now;
 	controller->now_data = now_data;
 	controller->accepting = true;
-	controller->listener_source = wl_event_loop_add_fd(
-		event_loop, controller->listener_fd, WL_EVENT_READABLE, handle_listener, controller);
+	controller->listener_source = wl_event_loop_add_fd(event_loop, controller->listener_fd, WL_EVENT_READABLE,
+							   handle_listener, controller);
 	if (!controller->listener_source) {
 		goto fail;
 	}
