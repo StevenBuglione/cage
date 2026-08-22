@@ -81,10 +81,15 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 	struct cg_surface_controller *controller = &view->server->surface_controller;
 	bool registry_required = controller->accepting;
 	bool new_association = registry_required && view->surface_policy.state == CG_SURFACE_VIEW_UNMANAGED;
+	const char *app_id_hint = view_get_app_id(view);
 
 	if (!cg_surface_view_policy_associate(&view->surface_policy, registry_required, &view->server->surface_registry,
-					      view_get_app_id(view), (uintptr_t) surface,
+					      app_id_hint, (uintptr_t) surface,
 					      cg_surface_controller_now(controller))) {
+		wlr_log(WLR_ERROR,
+			"Framework surface association rejected (hint_present=%s, hint_length=%zu, result=%d)",
+			app_id_hint ? "true" : "false", app_id_hint ? strlen(app_id_hint) : 0,
+			(int) view->surface_policy.association_result);
 		view_quarantine(view);
 		return false;
 	}
