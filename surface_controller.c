@@ -154,7 +154,8 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 			message->create_scene.output_width, message->create_scene.output_height);
 		applied = controller->last_scene_result == CG_SCENE_OK;
 		if (applied) {
-			emit_event(controller, CG_SURFACE_CONTROLLER_SCENE_CREATED, message->create_scene.scene_id, 0, 0);
+			emit_event(controller, CG_SURFACE_CONTROLLER_SCENE_CREATED, message->create_scene.scene_id, 0,
+				   0);
 		}
 		break;
 	case CG_SURFACE_CONTROL_DESTROY_SCENE:
