@@ -301,7 +301,7 @@ view_handle_surface_controller_event(const struct cg_surface_controller_event *e
 	}
 	if (event->type == CG_SURFACE_CONTROLLER_SCENE_CREATED) {
 		struct wlr_box layout_box;
-		struct cg_scene_record *record = cg_scene_model_find(&server->scene_model, event->scene_id);
+		const struct cg_scene_record *record = cg_scene_model_find(&server->scene_model, event->scene_id);
 		wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
 		if (!record || layout_box.width <= 0 || layout_box.height <= 0) {
 			return;
