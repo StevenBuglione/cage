@@ -30,8 +30,7 @@ cg_poc_resize_hit_test(struct cg_poc_rect output, int browser_width, double x, d
 }
 
 bool
-cg_poc_resize_begin(
-	struct cg_poc_resize_state *state, struct cg_poc_rect output, int browser_width, double x, double y)
+cg_poc_resize_begin(struct cg_poc_resize_state *state, struct cg_poc_rect output, int browser_width, double x, double y)
 {
 	if (!state || state->active || !cg_poc_resize_hit_test(output, browser_width, x, y)) {
 		return false;
