@@ -230,3 +230,25 @@ Output:
 /nix/store/2fw2nna0dnsml0cqskhfna3256brnfzf-cage-0.3.0
 binary SHA-256: db2d76287df5c3dfca44bd87e68905225f0ea5dfc2bed67137380560212d6f7f
 ```
+
+## M1-WP05 — generic compositor resize boundary
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `782c7f6372d5f6acbc1984e861fa0e79bcef046a` | PASS |
+| four-edge model, hit test, min/max | resize-boundary suite | PASS |
+| high-rate throttle and cancellation | resize-boundary suite | PASS |
+| fixed lifecycle event protocol | golden vector + real seqpacket delivery | PASS |
+| live pointer/scene integration | production wlroots build | PASS |
+| no POC layout/resize in executable | source-policy test | PASS |
+| all focused Meson suites | 11 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/004y6cmq60m7a09yz6vj2bqkqp4c8fin-cage-0.3.0
+binary SHA-256: 8328858898080e358ccbe53419666eb7a43e17eabd8c206c1df3e7e7275e10ae
+```

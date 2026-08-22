@@ -207,3 +207,21 @@ The production view path no longer calls the POC rectangle classifier. Scene
 state is the placement authority whenever the framework controller is active.
 The legacy POC layout remains only as a characterization test dependency until
 the resize-boundary replacement completes in M1-WP05.
+
+### 12. Generic compositor resize boundary
+
+- Commits: `11f8766649754a35b07fe7fc463ad4c59148da77`,
+  `bb185bf96c9ae5856811af4e1cfb333ca48eb880`,
+  `8f4496146b4de586fb9b8930d8478ea78cf2d33a`,
+  `782c7f6372d5f6acbc1984e861fa0e79bcef046a`
+- Scope: generic four-edge descriptors, deterministic hit testing, exclusive
+  pointer sessions, live scene geometry, throttled changing/commit/cancel
+  events, and complete lifecycle cancellation
+- Pinned Nix build: PASS
+- Meson tests: 11 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The production executable no longer compiles either `poc_layout.c` or
+`poc_resize.c`. Those files remain solely in the frozen WP02 characterization
+tests; generic scene state and `ResizeBoundary` are now the only controlled
+placement and interactive-resize authorities.
