@@ -178,6 +178,18 @@ surface_registry_test = executable(
 
 test('surface-registry', surface_registry_test)
 
+surface_control_protocol_test = executable(
+  'surface-control-protocol-test',
+  [
+    'surface_control_protocol.c',
+    'surface_registry.c',
+    'tests/surface_control_protocol_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('surface-control-protocol', surface_control_protocol_test)
+
 summary = [
   '',
   'Cage @0@'.format(version),
