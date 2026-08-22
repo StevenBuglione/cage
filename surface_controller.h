@@ -65,6 +65,8 @@ uint64_t cg_surface_controller_now(const struct cg_surface_controller *controlle
 bool cg_surface_controller_notify_associated(struct cg_surface_controller *controller,
 					     const struct cg_surface_identity *identity);
 bool cg_surface_controller_notify_resize(struct cg_surface_controller *controller, const struct cg_resize_event *event);
+bool cg_surface_controller_notify_output_changed(struct cg_surface_controller *controller,
+						 const struct cg_surface_control_resize_output *event);
 void cg_surface_controller_stop(struct cg_surface_controller *controller);
 
 #endif

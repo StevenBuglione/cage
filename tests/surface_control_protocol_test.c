@@ -180,6 +180,9 @@ test_scene_control_round_trip(void)
 	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_OK);
 	assert(parsed.type == CG_SURFACE_CONTROL_RESIZE_OUTPUT);
 	assert(parsed.resize_output.output_id == 11 && parsed.resize_output.output_width == 1920);
+	assert(cg_surface_control_encode_output_changed(&resize, bytes, sizeof(bytes), &size));
+	assert(memcmp(bytes, "LSC1\x01\x85\x00\x20", 8) == 0);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_UNKNOWN_TYPE);
 
 	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
 	assert(size == CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + 2 * CG_SURFACE_CONTROL_SURFACE_STATE_SIZE +

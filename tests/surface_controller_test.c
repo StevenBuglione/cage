@@ -278,6 +278,9 @@ main(void)
 	assert(observed.bounds_committed == 1);
 	assert(observed.last_boundary_id == 55);
 	assert(observed.last_bounds.width == 800);
+	assert(cg_surface_controller_notify_output_changed(&controller, &resize_output));
+	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x85\x00\x20", 8) == 0);
 
 	const struct cg_surface_control_destroy_scene destroy_scene = {.scene_id = 7};
 	assert(cg_surface_control_encode_destroy_scene(&destroy_scene, bytes, sizeof(bytes), &size));

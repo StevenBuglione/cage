@@ -40,6 +40,7 @@ enum cg_surface_control_message_type {
 	CG_SURFACE_CONTROL_BOUNDS_CHANGING = 0x82,
 	CG_SURFACE_CONTROL_BOUNDS_COMMITTED = 0x83,
 	CG_SURFACE_CONTROL_RESIZE_CANCELLED = 0x84,
+	CG_SURFACE_CONTROL_OUTPUT_CHANGED = 0x85,
 };
 
 enum cg_surface_control_parse_result {
@@ -104,6 +105,8 @@ bool cg_surface_control_encode_apply_scene(const struct cg_scene_snapshot *snaps
 					   size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_resize_output(const struct cg_surface_control_resize_output *request, uint8_t *bytes_out,
 					     size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_output_changed(const struct cg_surface_control_resize_output *event, uint8_t *bytes_out,
+					      size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
 					    size_t *size_out);
 

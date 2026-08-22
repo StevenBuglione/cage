@@ -412,6 +412,17 @@ cg_surface_control_encode_resize_output(const struct cg_surface_control_resize_o
 }
 
 bool
+cg_surface_control_encode_output_changed(const struct cg_surface_control_resize_output *event, uint8_t *bytes_out,
+					 size_t capacity, size_t *size_out)
+{
+	if (!cg_surface_control_encode_resize_output(event, bytes_out, capacity, size_out)) {
+		return false;
+	}
+	bytes_out[5] = CG_SURFACE_CONTROL_OUTPUT_CHANGED;
+	return true;
+}
+
+bool
 cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
 				       size_t *size_out)
 {
