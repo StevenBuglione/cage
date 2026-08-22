@@ -119,3 +119,20 @@ All six behaviors from the locked 474-line POC patch are now accounted for.
 The temporary `cg_poc_*`, titles, environment variables, and raw-width transport
 remain characterization scaffolding—not the framework API—and are replaced in
 M1-WP03 through M1-WP05.
+
+### 7. Generic one-time surface registry
+
+- Commits: `d304174409d031ef638b605523340924661b2a7a`,
+  `9137a73c894a56dc692668c2dbefdd1e4569ef05`,
+  `2d7843ea8f9cbb27ba8358b663526337fc1d91a8`
+- Scope: bounded generic registry, 256-bit one-time tokens, expiry, immutable
+  association, parent validation, replay protection, retirement, secure reset,
+  and versioned framework `app_id` token hints
+- Pinned Nix build: PASS
+- Meson tests: 5 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The registry test covers invalid/zero fields, duplicate IDs/tokens/surfaces,
+unknown/stale/replayed tokens, required popup parent, invalid parent, timeout
+bounds/overflow, capacity, retirement, reset token erasure, and token-hint
+encoding/decoding. It contains no application, provider, or browser identity.

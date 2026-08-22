@@ -132,3 +132,21 @@ Output:
 /nix/store/q012d78nqmv7c5sl4s1crml12rak7vwj-cage-0.3.0
 binary SHA-256: c5295816fbee51bf9956749a1877ce2fcfa923b47a9cecaab290fa0450d90d8d
 ```
+
+## M1-WP03 checkpoint 1 — generic surface registry
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `2d7843ea8f9cbb27ba8358b663526337fc1d91a8` | PASS |
+| generic surface registry | Meson test | PASS |
+| all focused Meson suites | 5 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/7hg8s9mba716ms8jns8qsby95vyfdl39-cage-0.3.0
+binary SHA-256: 36adfa29abfd13b4d21633da4a460cdc17073fc44aff1385efa837e087bfb43c
+```
