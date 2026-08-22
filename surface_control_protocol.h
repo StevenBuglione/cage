@@ -5,8 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "scene_model.h"
 #include "resize_boundary.h"
+#include "scene_model.h"
 #include "surface_registry.h"
 
 #define CG_SURFACE_CONTROL_VERSION 1

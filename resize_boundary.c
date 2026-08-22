@@ -27,8 +27,7 @@ find_boundary(const struct cg_scene_snapshot *snapshot, cg_resize_boundary_id bo
 static bool
 surface_is_associated(const struct cg_surface_registry *registry, cg_scene_id scene_id, cg_surface_id surface_id)
 {
-	const struct cg_surface_registration *registration =
-		cg_surface_registry_find(registry, scene_id, surface_id);
+	const struct cg_surface_registration *registration = cg_surface_registry_find(registry, scene_id, surface_id);
 	return registration && registration->state == CG_SURFACE_REGISTRATION_ASSOCIATED;
 }
 
@@ -107,12 +106,14 @@ cg_resize_boundary_hit_test(const struct cg_scene_model *model, const struct cg_
 			struct cg_scene_rect resolved;
 			if (!boundary->enabled || !boundary->visible || !target || !target->visible ||
 			    !surface_is_associated(registry, record->snapshot.scene_id, target->surface_id) ||
-			    !cg_scene_model_resolve_surface(model, record->snapshot.scene_id, target->surface_id, &resolved) ||
+			    !cg_scene_model_resolve_surface(model, record->snapshot.scene_id, target->surface_id,
+							    &resolved) ||
 			    !point_hits_boundary(boundary, target, resolved, x, y)) {
 				continue;
 			}
 			if (!best_target || target->z_index > best_target->z_index ||
-			    (target->z_index == best_target->z_index && boundary->boundary_id > best_boundary->boundary_id)) {
+			    (target->z_index == best_target->z_index &&
+			     boundary->boundary_id > best_boundary->boundary_id)) {
 				best_target = target;
 				best_boundary = boundary;
 				best_scene_id = record->snapshot.scene_id;
@@ -187,8 +188,8 @@ active_target(struct cg_resize_session *session, struct cg_scene_model *model,
 	const struct cg_scene_resize_boundary *boundary;
 	struct cg_scene_surface_state *target;
 
-	if (!record || record->snapshot.revision != session->revision || record->output_width != session->output_width ||
-	    record->output_height != session->output_height) {
+	if (!record || record->snapshot.revision != session->revision ||
+	    record->output_width != session->output_width || record->output_height != session->output_height) {
 		return NULL;
 	}
 	boundary = find_boundary(&record->snapshot, session->hit.boundary_id);

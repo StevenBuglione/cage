@@ -114,7 +114,7 @@ struct cg_scene_record *cg_scene_model_find_mutable(struct cg_scene_model *model
 const struct cg_scene_surface_state *cg_scene_snapshot_find_surface(const struct cg_scene_snapshot *snapshot,
 								    cg_surface_id surface_id);
 struct cg_scene_surface_state *cg_scene_snapshot_find_surface_mutable(struct cg_scene_snapshot *snapshot,
-								     cg_surface_id surface_id);
+								      cg_surface_id surface_id);
 bool cg_scene_model_resolve_surface(const struct cg_scene_model *model, cg_scene_id scene_id, cg_surface_id surface_id,
 				    struct cg_scene_rect *resolved_out);
 const struct cg_scene_surface_state *cg_scene_model_hit_test(const struct cg_scene_model *model,

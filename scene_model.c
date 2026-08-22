@@ -254,8 +254,8 @@ validate_snapshot(const struct cg_scene_record *record, const struct cg_surface_
 		const struct cg_scene_resize_boundary *boundary = &snapshot->resize_boundaries[index];
 		const struct cg_scene_surface_state *target =
 			cg_scene_snapshot_find_surface(snapshot, boundary->target_surface_id);
-		bool horizontal = boundary->edge == CG_SCENE_RESIZE_EDGE_LEFT ||
-				  boundary->edge == CG_SCENE_RESIZE_EDGE_RIGHT;
+		bool horizontal =
+			boundary->edge == CG_SCENE_RESIZE_EDGE_LEFT || boundary->edge == CG_SCENE_RESIZE_EDGE_RIGHT;
 		if (boundary->boundary_id == 0 || boundary->target_surface_id == 0 || !edge_valid(boundary->edge) ||
 		    boundary->minimum_size == 0 || boundary->minimum_size > boundary->maximum_size ||
 		    boundary->maximum_size > INT32_MAX || boundary->hit_slop > CG_SCENE_RESIZE_HIT_SLOP_MAX ||
@@ -263,9 +263,9 @@ validate_snapshot(const struct cg_scene_record *record, const struct cg_surface_
 		    (horizontal ? boundary->cursor != CG_SCENE_RESIZE_CURSOR_COLUMN
 				: boundary->cursor != CG_SCENE_RESIZE_CURSOR_ROW) ||
 		    (horizontal ? (uint32_t) target->bounds.width : (uint32_t) target->bounds.height) <
-			boundary->minimum_size ||
+			    boundary->minimum_size ||
 		    (horizontal ? (uint32_t) target->bounds.width : (uint32_t) target->bounds.height) >
-			boundary->maximum_size) {
+			    boundary->maximum_size) {
 			return CG_SCENE_BOUNDARY_INVALID;
 		}
 		for (uint16_t other = 0; other < index; other++) {

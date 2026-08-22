@@ -296,8 +296,7 @@ view_handle_surface_controller_event(const struct cg_surface_controller_event *e
 	}
 	if (server->seat && server->resize_session.active &&
 	    (event->type == CG_SURFACE_CONTROLLER_RESET ||
-	     ((event->type == CG_SURFACE_CONTROLLER_RETIRED ||
-	       event->type == CG_SURFACE_CONTROLLER_SCENE_DESTROYED ||
+	     ((event->type == CG_SURFACE_CONTROLLER_RETIRED || event->type == CG_SURFACE_CONTROLLER_SCENE_DESTROYED ||
 	       event->type == CG_SURFACE_CONTROLLER_SCENE_APPLIED ||
 	       event->type == CG_SURFACE_CONTROLLER_OUTPUT_RESIZED) &&
 	      server->resize_session.hit.scene_id == event->scene_id &&
