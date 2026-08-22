@@ -5,8 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "surface_registry.h"
 #include "scene_model.h"
+#include "surface_registry.h"
 
 #define CG_SURFACE_CONTROL_VERSION 1
 #define CG_SURFACE_CONTROL_HEADER_SIZE 8
@@ -20,9 +20,9 @@
 #define CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE 48
 #define CG_SURFACE_CONTROL_SURFACE_STATE_SIZE 64
 #define CG_SURFACE_CONTROL_RESIZE_BOUNDARY_SIZE 40
-#define CG_SURFACE_CONTROL_APPLY_SCENE_MAX_SIZE \
-	(CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + \
-	 CG_SCENE_SURFACE_CAPACITY * CG_SURFACE_CONTROL_SURFACE_STATE_SIZE + \
+#define CG_SURFACE_CONTROL_APPLY_SCENE_MAX_SIZE                                                                        \
+	(CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE +                                                                  \
+	 CG_SCENE_SURFACE_CAPACITY * CG_SURFACE_CONTROL_SURFACE_STATE_SIZE +                                           \
 	 CG_SCENE_RESIZE_BOUNDARY_CAPACITY * CG_SURFACE_CONTROL_RESIZE_BOUNDARY_SIZE)
 #define CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE CG_SURFACE_CONTROL_APPLY_SCENE_MAX_SIZE
 
@@ -91,13 +91,13 @@ bool cg_surface_control_encode_unregister(const struct cg_surface_control_unregi
 bool cg_surface_control_encode_reset(uint8_t *bytes_out, size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_associated(const struct cg_surface_identity *identity, uint8_t *bytes_out,
 					  size_t capacity, size_t *size_out);
-bool cg_surface_control_encode_create_scene(const struct cg_surface_control_create_scene *request,
-					    uint8_t *bytes_out, size_t capacity, size_t *size_out);
-bool cg_surface_control_encode_destroy_scene(const struct cg_surface_control_destroy_scene *request,
-					     uint8_t *bytes_out, size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_create_scene(const struct cg_surface_control_create_scene *request, uint8_t *bytes_out,
+					    size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_destroy_scene(const struct cg_surface_control_destroy_scene *request, uint8_t *bytes_out,
+					     size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_apply_scene(const struct cg_scene_snapshot *snapshot, uint8_t *bytes_out,
 					   size_t capacity, size_t *size_out);
-bool cg_surface_control_encode_resize_output(const struct cg_surface_control_resize_output *request,
-					     uint8_t *bytes_out, size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_resize_output(const struct cg_surface_control_resize_output *request, uint8_t *bytes_out,
+					     size_t capacity, size_t *size_out);
 
 #endif

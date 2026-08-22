@@ -121,10 +121,10 @@ main(void)
 	cg_surface_registry_init(&registry);
 	cg_scene_model_init(&scenes);
 	cg_surface_controller_init(&controller);
-	assert(cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, &scenes, test_now, &now,
-					   observe_event, &observed));
-	assert(!cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, &scenes, test_now, &now,
-					    observe_event, &observed));
+	assert(cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, &scenes, test_now,
+					   &now, observe_event, &observed));
+	assert(!cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, &scenes, test_now,
+					    &now, observe_event, &observed));
 	assert(stat(path, &metadata) == 0);
 	assert((metadata.st_mode & 0777) == 0600);
 

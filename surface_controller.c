@@ -136,8 +136,8 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 			cg_scene_model_destroy(controller->scenes, message->destroy_scene.scene_id);
 		if (controller->last_scene_result == CG_SCENE_OK) {
 			(void) cg_surface_registry_retire_scene(controller->registry, message->destroy_scene.scene_id);
-			emit_event(controller, CG_SURFACE_CONTROLLER_SCENE_DESTROYED,
-				   message->destroy_scene.scene_id, 0, 0);
+			emit_event(controller, CG_SURFACE_CONTROLLER_SCENE_DESTROYED, message->destroy_scene.scene_id,
+				   0, 0);
 			applied = true;
 		}
 		break;
@@ -287,14 +287,13 @@ cg_surface_controller_init(struct cg_surface_controller *controller)
 bool
 cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_event_loop *event_loop,
 			    const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
-			    struct cg_scene_model *scenes,
-			    cg_surface_controller_now_func now, void *now_data, cg_surface_controller_event_func event,
-			    void *event_data)
+			    struct cg_scene_model *scenes, cg_surface_controller_now_func now, void *now_data,
+			    cg_surface_controller_event_func event, void *event_data)
 {
 	struct sockaddr_un address = {.sun_family = AF_UNIX};
 
-	if (!controller || !event_loop || !registry || !scenes || controller->accepting || controller->listener_fd >= 0 ||
-	    !socket_path_valid(path, runtime_dir, sizeof(address.sun_path))) {
+	if (!controller || !event_loop || !registry || !scenes || controller->accepting ||
+	    controller->listener_fd >= 0 || !socket_path_valid(path, runtime_dir, sizeof(address.sun_path))) {
 		errno = EINVAL;
 		return false;
 	}

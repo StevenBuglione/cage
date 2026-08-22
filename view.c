@@ -229,10 +229,11 @@ view_apply_scene_state(struct cg_view *view)
 		return;
 	}
 	record = cg_scene_model_find(&view->server->scene_model, view->surface_policy.identity.scene_id);
-	state = record ? cg_scene_snapshot_find_surface(&record->snapshot, view->surface_policy.identity.surface_id) : NULL;
-	if (!state || !cg_scene_model_resolve_surface(&view->server->scene_model,
-						      view->surface_policy.identity.scene_id,
-						      view->surface_policy.identity.surface_id, &resolved)) {
+	state = record ? cg_scene_snapshot_find_surface(&record->snapshot, view->surface_policy.identity.surface_id)
+		       : NULL;
+	if (!state ||
+	    !cg_scene_model_resolve_surface(&view->server->scene_model, view->surface_policy.identity.scene_id,
+					    view->surface_policy.identity.surface_id, &resolved)) {
 		view_hide_scene_state(view);
 		return;
 	}
@@ -270,15 +271,15 @@ view_apply_scene_order_and_focus(struct cg_server *server, cg_scene_id scene_id)
 
 	wl_list_for_each (view, &server->views, link) {
 		if (view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED ||
-		    view->surface_policy.identity.scene_id != scene_id || !view->scene_present || !view->scene_visible) {
+		    view->surface_policy.identity.scene_id != scene_id || !view->scene_present ||
+		    !view->scene_visible) {
 			continue;
 		}
 		size_t position = count;
-		while (position > 0 &&
-		       (ordered[position - 1]->scene_z_index > view->scene_z_index ||
-			(ordered[position - 1]->scene_z_index == view->scene_z_index &&
-			 ordered[position - 1]->surface_policy.identity.surface_id >
-				 view->surface_policy.identity.surface_id))) {
+		while (position > 0 && (ordered[position - 1]->scene_z_index > view->scene_z_index ||
+					(ordered[position - 1]->scene_z_index == view->scene_z_index &&
+					 ordered[position - 1]->surface_policy.identity.surface_id >
+						 view->surface_policy.identity.surface_id))) {
 			ordered[position] = ordered[position - 1];
 			position--;
 		}
@@ -336,8 +337,7 @@ view_handle_surface_controller_event(const struct cg_surface_controller_event *e
 			view_apply_scene_state(view);
 		}
 	}
-	if (event->type == CG_SURFACE_CONTROLLER_SCENE_APPLIED ||
-	    event->type == CG_SURFACE_CONTROLLER_OUTPUT_RESIZED) {
+	if (event->type == CG_SURFACE_CONTROLLER_SCENE_APPLIED || event->type == CG_SURFACE_CONTROLLER_OUTPUT_RESIZED) {
 		view_apply_scene_order_and_focus(server, event->scene_id);
 	}
 }
@@ -348,8 +348,7 @@ view_position(struct cg_view *view)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
 
-	if (view->server->surface_controller.accepting &&
-	    view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED) {
+	if (view->server->surface_controller.accepting && view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED) {
 		view_apply_scene_state(view);
 		return;
 	}
@@ -370,10 +369,9 @@ view_position_all(struct cg_server *server)
 		wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
 		for (size_t index = 0; index < CG_SCENE_CAPACITY; index++) {
 			if (server->scene_model.scenes[index].occupied) {
-				(void) cg_scene_model_resize_output(&server->scene_model,
-							    server->scene_model.scenes[index].snapshot.scene_id,
-							    (uint32_t) layout_box.width,
-							    (uint32_t) layout_box.height);
+				(void) cg_scene_model_resize_output(
+					&server->scene_model, server->scene_model.scenes[index].snapshot.scene_id,
+					(uint32_t) layout_box.width, (uint32_t) layout_box.height);
 			}
 		}
 	}

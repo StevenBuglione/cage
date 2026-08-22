@@ -54,8 +54,7 @@ struct cg_surface_controller {
 void cg_surface_controller_init(struct cg_surface_controller *controller);
 bool cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_event_loop *event_loop,
 				 const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
-				 struct cg_scene_model *scenes,
-				 cg_surface_controller_now_func now, void *now_data,
+				 struct cg_scene_model *scenes, cg_surface_controller_now_func now, void *now_data,
 				 cg_surface_controller_event_func event, void *event_data);
 uint64_t cg_surface_controller_now(const struct cg_surface_controller *controller);
 bool cg_surface_controller_notify_associated(struct cg_surface_controller *controller,

@@ -396,7 +396,8 @@ cg_surface_control_encode_resize_output(const struct cg_surface_control_resize_o
 					size_t capacity, size_t *size_out)
 {
 	if (!request || request->scene_id == 0 || request->output_id == 0 || request->output_width == 0 ||
-	    request->output_height == 0 || !bytes_out || capacity < CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE || !size_out) {
+	    request->output_height == 0 || !bytes_out || capacity < CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE ||
+	    !size_out) {
 		return false;
 	}
 	memset(bytes_out, 0, CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE);
