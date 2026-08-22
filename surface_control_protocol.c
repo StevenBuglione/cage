@@ -415,7 +415,7 @@ bool
 cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
 				       size_t *size_out)
 {
-	enum cg_surface_control_message_type type;
+	enum cg_surface_control_message_type type = CG_SURFACE_CONTROL_BOUNDS_CHANGING;
 
 	if (!event || event->scene_id == 0 || event->revision == 0 || event->boundary_id == 0 ||
 	    event->surface_id == 0 || event->bounds.width <= 0 || event->bounds.height <= 0 || !bytes_out ||
