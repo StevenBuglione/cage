@@ -168,3 +168,21 @@ Output:
 /nix/store/rsa4a4fbkxfaay0q8chx4iacxykp9757-cage-0.3.0
 binary SHA-256: 7fe7025b7baee6c10a82f50ed2e24dd45afe8bf8434bc861501b17eb3129c709
 ```
+
+## M1-WP03 checkpoint 3 — surface controller lifecycle
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `29772babf21df5ffd71e9f2f40543bd551c730a5` | PASS |
+| real seqpacket/Wayland controller | Meson test | PASS |
+| all focused Meson suites | 7 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/p296ffw8kkwxip13n3mch317dli5n6wk-cage-0.3.0
+binary SHA-256: 90aa81107c0691619d9689c2535bd900c7f7b88a0649cc74a2f376bdaf9ea874
+```

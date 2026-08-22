@@ -151,3 +151,18 @@ The protocol suite locks golden bytes and rejects every truncation, oversized
 and declared-length mismatch, bad magic/version/type, nonzero reserved bits,
 zero/invalid fields, invalid popup parent semantics, and insufficient encoder
 buffers. The maximum accepted datagram is 72 bytes.
+
+### 9. Private connection-oriented surface controller
+
+- Commits: `de8c6e7f96e51001f3f79a0c30cd1dc0a960166d`,
+  `29772babf21df5ffd71e9f2f40543bd551c730a5`
+- Scope: same-user `SOCK_SEQPACKET` controller, real Wayland event-loop
+  ownership, protocol dispatch, registry mutation, and disconnect reset
+- Pinned Nix build: PASS
+- Meson tests: 7 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+Production Cage no longer consumes the raw POC width datagram. The new socket is
+`0600`, accepts one current-user peer, preserves packet boundaries, rejects
+oversized/invalid messages, and securely resets pending registrations when the
+client disconnects or the controller stops.
