@@ -188,3 +188,22 @@ The old title classifier and raw-width controller compile only into frozen WP02
 tests. The Cage executable uses the explicit registry/controller path, while
 running without a configured framework controller retains ordinary upstream
 single-application behavior.
+
+### 11. Generic atomic scene executor
+
+- Commits: `fe9ecc4d6127ad45804903974b040f6a50f59a82`,
+  `10a58f228cae8759c4dd2b6972b498fdfff0ef4f`,
+  `48401ba33992438cccdb818b33c28f3ba1741eee`,
+  `36b3398fb71106c80a7d45398e322431331634c4`,
+  `4627c82ac5e6e5b12bf9af645f70f896dee30238`
+- Scope: complete generic snapshots, atomic revisions, controller scene
+  messages, bounds/clip/z-order/visibility/input/focus application, output
+  resizing, and reconnect/reset semantics
+- Pinned Nix build: PASS
+- Meson tests: 10 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The production view path no longer calls the POC rectangle classifier. Scene
+state is the placement authority whenever the framework controller is active.
+The legacy POC layout remains only as a characterization test dependency until
+the resize-boundary replacement completes in M1-WP05.

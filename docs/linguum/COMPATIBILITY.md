@@ -208,3 +208,25 @@ Output:
 /nix/store/fm5s25j0qdxpmswk7nry1a6kr8b43f52-cage-0.3.0
 binary SHA-256: ae8e7119af8d5956eb8e4ae833bbd558a90fdd9c0d9381b87dfa6fe2fdf3c2a6
 ```
+
+## M1-WP04 — generic atomic scene model
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `4627c82ac5e6e5b12bf9af645f70f896dee30238` | PASS |
+| full snapshot atomicity/revisions | scene-model suite | PASS |
+| bounds/clip/z-order/visibility/input | scene-model + live integration build | PASS |
+| pending/associated/reconnect/output resize | scene-model suite | PASS |
+| bounded scene controller messages | protocol + real event-loop suite | PASS |
+| production source policy | source-policy test | PASS |
+| all focused Meson suites | 10 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/2fw2nna0dnsml0cqskhfna3256brnfzf-cage-0.3.0
+binary SHA-256: db2d76287df5c3dfca44bd87e68905225f0ea5dfc2bed67137380560212d6f7f
+```
