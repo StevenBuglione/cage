@@ -101,8 +101,8 @@ enum cg_scene_result {
 
 void cg_scene_model_init(struct cg_scene_model *model);
 void cg_scene_model_reset(struct cg_scene_model *model);
-enum cg_scene_result cg_scene_model_create(struct cg_scene_model *model, cg_scene_id scene_id,
-					   cg_output_id output_id, uint32_t output_width, uint32_t output_height);
+enum cg_scene_result cg_scene_model_create(struct cg_scene_model *model, cg_scene_id scene_id, cg_output_id output_id,
+					   uint32_t output_width, uint32_t output_height);
 enum cg_scene_result cg_scene_model_destroy(struct cg_scene_model *model, cg_scene_id scene_id);
 enum cg_scene_result cg_scene_model_apply(struct cg_scene_model *model, const struct cg_surface_registry *registry,
 					  const struct cg_scene_snapshot *snapshot);
@@ -110,9 +110,9 @@ enum cg_scene_result cg_scene_model_resize_output(struct cg_scene_model *model, 
 						  uint32_t output_width, uint32_t output_height);
 const struct cg_scene_record *cg_scene_model_find(const struct cg_scene_model *model, cg_scene_id scene_id);
 const struct cg_scene_surface_state *cg_scene_snapshot_find_surface(const struct cg_scene_snapshot *snapshot,
-								   cg_surface_id surface_id);
-bool cg_scene_model_resolve_surface(const struct cg_scene_model *model, cg_scene_id scene_id,
-				    cg_surface_id surface_id, struct cg_scene_rect *resolved_out);
+								    cg_surface_id surface_id);
+bool cg_scene_model_resolve_surface(const struct cg_scene_model *model, cg_scene_id scene_id, cg_surface_id surface_id,
+				    struct cg_scene_rect *resolved_out);
 const struct cg_scene_surface_state *cg_scene_model_hit_test(const struct cg_scene_model *model,
 							     const struct cg_surface_registry *registry,
 							     cg_scene_id scene_id, int32_t x, int32_t y);

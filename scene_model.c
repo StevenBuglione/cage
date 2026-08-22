@@ -106,8 +106,8 @@ find_mutable(struct cg_scene_model *model, cg_scene_id scene_id)
 }
 
 enum cg_scene_result
-cg_scene_model_create(struct cg_scene_model *model, cg_scene_id scene_id, cg_output_id output_id,
-		      uint32_t output_width, uint32_t output_height)
+cg_scene_model_create(struct cg_scene_model *model, cg_scene_id scene_id, cg_output_id output_id, uint32_t output_width,
+		      uint32_t output_height)
 {
 	struct cg_scene_record *available = NULL;
 
@@ -124,7 +124,7 @@ cg_scene_model_create(struct cg_scene_model *model, cg_scene_id scene_id, cg_out
 		}
 		if (record->snapshot.scene_id == scene_id) {
 			return record->snapshot.output_id == output_id && record->output_width == output_width &&
-				       record->output_height == output_height
+					       record->output_height == output_height
 				       ? CG_SCENE_OK
 				       : CG_SCENE_DUPLICATE_ID;
 		}
@@ -203,10 +203,12 @@ validate_snapshot(const struct cg_scene_record *record, const struct cg_surface_
 		const struct cg_surface_registration *registration =
 			cg_surface_registry_find(registry, snapshot->scene_id, state->surface_id);
 
-		if (state->surface_id == 0 || !rect_valid(state->bounds) || (state->has_clip && !rect_valid(state->clip)) ||
-		    (!state->has_clip && (state->clip.x != 0 || state->clip.y != 0 || state->clip.width != 0 ||
-					 state->clip.height != 0)) ||
-		    (!state->has_parent && state->parent_surface_id != 0) || (state->accepts_input && !state->visible)) {
+		if (state->surface_id == 0 || !rect_valid(state->bounds) ||
+		    (state->has_clip && !rect_valid(state->clip)) ||
+		    (!state->has_clip &&
+		     (state->clip.x != 0 || state->clip.y != 0 || state->clip.width != 0 || state->clip.height != 0)) ||
+		    (!state->has_parent && state->parent_surface_id != 0) ||
+		    (state->accepts_input && !state->visible)) {
 			return CG_SCENE_INVALID;
 		}
 		if (!registration || registration->state == CG_SURFACE_REGISTRATION_EXPIRED ||

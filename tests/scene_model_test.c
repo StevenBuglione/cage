@@ -34,8 +34,7 @@ associate_surface(struct cg_surface_registry *registry, cg_surface_id surface_id
 {
 	struct cg_surface_token token = token_for(surface_id);
 	struct cg_surface_identity identity;
-	assert(cg_surface_registry_associate(registry, &token, opaque_surface, 1, &identity) ==
-	       CG_SURFACE_REGISTRY_OK);
+	assert(cg_surface_registry_associate(registry, &token, opaque_surface, 1, &identity) == CG_SURFACE_REGISTRY_OK);
 }
 
 static struct cg_scene_surface_state
