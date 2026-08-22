@@ -221,6 +221,18 @@ surface_view_policy_test = executable(
 
 test('surface-view-policy', surface_view_policy_test)
 
+scene_model_test = executable(
+  'scene-model-test',
+  [
+    'scene_model.c',
+    'surface_registry.c',
+    'tests/scene_model_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('scene-model', scene_model_test)
+
 python = import('python').find_installation()
 test(
   'framework-source-policy',
