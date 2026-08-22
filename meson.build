@@ -114,6 +114,17 @@ executable(
   install: true,
 )
 
+poc_layout_test = executable(
+  'poc-layout-test',
+  [
+    'poc_layout.c',
+    'tests/poc_layout_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('poc-layout-characterization', poc_layout_test)
+
 summary = [
   '',
   'Cage @0@'.format(version),
