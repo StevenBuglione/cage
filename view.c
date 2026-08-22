@@ -367,8 +367,8 @@ view_position_all(struct cg_server *server)
 				bool changed = record->output_width != (uint32_t) layout_box.width ||
 					       record->output_height != (uint32_t) layout_box.height;
 				(void) cg_scene_model_resize_output(&server->scene_model, record->snapshot.scene_id,
-							    (uint32_t) layout_box.width,
-							    (uint32_t) layout_box.height);
+								    (uint32_t) layout_box.width,
+								    (uint32_t) layout_box.height);
 				if (changed) {
 					const struct cg_surface_control_resize_output event = {
 						.scene_id = record->snapshot.scene_id,
@@ -376,7 +376,8 @@ view_position_all(struct cg_server *server)
 						.output_width = (uint32_t) layout_box.width,
 						.output_height = (uint32_t) layout_box.height,
 					};
-					(void) cg_surface_controller_notify_output_changed(&server->surface_controller, &event);
+					(void) cg_surface_controller_notify_output_changed(&server->surface_controller,
+										   &event);
 				}
 			}
 		}
