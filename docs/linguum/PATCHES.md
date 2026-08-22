@@ -73,3 +73,16 @@ The pure state-machine suite covers layout origins, both hit-slop edges, output
 Y bounds, inactive/duplicate grabs, motion in both directions, fractional
 motion truncation, min/max clamping, release, and invalid calls. Generic
 ResizeBoundary replaces this temporary vertical-only model in M1-WP05.
+
+### 4. Fullscreen placement
+
+- Commit: `aa383e93ec493e4a8cf1920b64840ac33441a054`
+- Scope: fullscreen requests reuse the view's characterized slot placement
+  instead of forcing the whole output dimensions
+- Pinned Nix build: PASS
+- Meson tests: 3 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The layout suite now includes explicit 1920×1080 fullscreen expectations for
+workspace, controls, and browser slots, while its disabled-layout cases retain
+upstream whole-output behavior.

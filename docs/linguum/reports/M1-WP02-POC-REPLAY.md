@@ -1,6 +1,6 @@
 # M1-WP02 — POC Patch Replay
 
-Status: in progress (checkpoints 1–3 of 6 verified)
+Status: in progress (checkpoints 1–4 of 6 verified)
 
 ## Locked artifact
 
@@ -76,3 +76,22 @@ binary SHA-256: 31e499579b02866b3530c585e77ff69bea03edb04e72ec40a3a7da3cbcb07138
 ```
 
 The tests run without a compositor display and require no operator input.
+
+## Checkpoint 4 — fullscreen placement
+
+Fullscreen requests now reuse `view_position`, preserving the same
+characterized surface slot instead of overriding it with whole-output
+dimensions. The layout suite contains explicit 1920×1080 fullscreen slot
+expectations and retains disabled-layout fallback coverage.
+
+Verified Cage head: `aa383e93ec493e4a8cf1920b64840ac33441a054`
+
+```text
+pinned Nix Cage build: PASS
+all focused Meson suites: 3 passed, 0 failed
+clang-format 21.1.8 --dry-run --Werror: PASS
+Nix output: /nix/store/y47kmx8g9gx9l8641mlgmwb28pc9q3r8-cage-0.3.0
+binary SHA-256: 0d3a30a6fa1a6eec554d6fe7967a59a55b94c4474257c9f871ae9aad64dd2719
+```
+
+No display or human observation was used.
