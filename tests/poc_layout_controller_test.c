@@ -60,12 +60,12 @@ main(void)
 	assert(runtime_dir);
 	assert(snprintf(path, sizeof(path), "%s/layout.sock", runtime_dir) > 0);
 	cg_poc_layout_controller_init(&controller);
-	assert(cg_poc_layout_controller_start(
-		&controller, wl_display_get_event_loop(display), path, runtime_dir, apply_width, &apply_state));
+	assert(cg_poc_layout_controller_start(&controller, wl_display_get_event_loop(display), path, runtime_dir,
+					      apply_width, &apply_state));
 	assert(controller.accepting);
 	assert(controller.source);
-	assert(!cg_poc_layout_controller_start(
-		&controller, wl_display_get_event_loop(display), path, runtime_dir, apply_width, &apply_state));
+	assert(!cg_poc_layout_controller_start(&controller, wl_display_get_event_loop(display), path, runtime_dir,
+					       apply_width, &apply_state));
 
 	send_message(path, "620", 3);
 	dispatch(wl_display_get_event_loop(display));

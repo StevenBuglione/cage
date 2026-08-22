@@ -23,7 +23,8 @@ struct cg_poc_layout_controller {
 
 void cg_poc_layout_controller_init(struct cg_poc_layout_controller *controller);
 bool cg_poc_layout_controller_start(struct cg_poc_layout_controller *controller, struct wl_event_loop *event_loop,
-	const char *path, const char *runtime_dir, cg_poc_layout_apply_width_func apply_width, void *data);
+				    const char *path, const char *runtime_dir,
+				    cg_poc_layout_apply_width_func apply_width, void *data);
 void cg_poc_layout_controller_stop(struct cg_poc_layout_controller *controller);
 
 #endif

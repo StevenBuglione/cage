@@ -130,8 +130,8 @@ setup_poc_layout_socket(struct cg_server *server, struct wl_event_loop *event_lo
 		return true;
 	}
 
-	if (!cg_poc_layout_controller_start(
-		    &server->poc_layout_controller, event_loop, path, runtime_dir, apply_poc_layout_width, server)) {
+	if (!cg_poc_layout_controller_start(&server->poc_layout_controller, event_loop, path, runtime_dir,
+					    apply_poc_layout_width, server)) {
 		wlr_log_errno(WLR_ERROR, "Unable to create POC layout socket");
 		return false;
 	}

@@ -65,7 +65,8 @@ cg_poc_layout_controller_init(struct cg_poc_layout_controller *controller)
 
 bool
 cg_poc_layout_controller_start(struct cg_poc_layout_controller *controller, struct wl_event_loop *event_loop,
-	const char *path, const char *runtime_dir, cg_poc_layout_apply_width_func apply_width, void *data)
+			       const char *path, const char *runtime_dir, cg_poc_layout_apply_width_func apply_width,
+			       void *data)
 {
 	if (!controller || !event_loop || !apply_width || controller->source || controller->socket.fd >= 0 ||
 	    controller->accepting) {
@@ -84,8 +85,8 @@ cg_poc_layout_controller_start(struct cg_poc_layout_controller *controller, stru
 	controller->accepted_messages = 0;
 	controller->rejected_messages = 0;
 	controller->receive_errors = 0;
-	controller->source = wl_event_loop_add_fd(
-		event_loop, controller->socket.fd, WL_EVENT_READABLE, handle_layout_message, controller);
+	controller->source = wl_event_loop_add_fd(event_loop, controller->socket.fd, WL_EVENT_READABLE,
+						  handle_layout_message, controller);
 	if (!controller->source) {
 		int saved_errno = errno;
 		cg_poc_layout_controller_stop(controller);
