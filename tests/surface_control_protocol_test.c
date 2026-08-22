@@ -82,6 +82,7 @@ test_associated_golden_vector(void)
 		.parent_surface_id = 0x2122232425262728ULL,
 	};
 	uint8_t bytes[CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE];
+	struct cg_surface_control_message parsed;
 	size_t size;
 
 	assert(cg_surface_control_encode_associated(&identity, bytes, sizeof(bytes), &size));
@@ -93,6 +94,7 @@ test_associated_golden_vector(void)
 	assert(bytes[25] == 1);
 	assert(bytes[26] == 0 && bytes[27] == 0);
 	assert(memcmp(bytes + 28, "!\x22#$%&'(\x00\x00\x00\x00", 12) == 0);
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_UNKNOWN_TYPE);
 }
 
 static void
