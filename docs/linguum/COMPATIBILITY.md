@@ -59,3 +59,22 @@ Output:
 /nix/store/nlklzjqmkbbd3c6jghz8j1zp50x0hzc2-cage-0.3.0
 binary SHA-256: 9fc86cfb008b6f7688d05833200938db08be3994071ef45cce443142b21ff2d3
 ```
+
+## M1-WP02 checkpoint 3 — divider pointer grab
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `5a2c8ccff400092b53a6eaf343925c701602bb47` | PASS |
+| layout characterization | Meson test | PASS |
+| real Unix socket integration | Meson test | PASS |
+| divider state machine | Meson test | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/rg7vxkgx8gvlzxaqrjw35ylj95rcm977-cage-0.3.0
+binary SHA-256: 31e499579b02866b3530c585e77ff69bea03edb04e72ec40a3a7da3cbcb07138
+```

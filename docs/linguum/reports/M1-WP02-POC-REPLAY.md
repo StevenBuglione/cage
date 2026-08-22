@@ -1,6 +1,6 @@
 # M1-WP02 — POC Patch Replay
 
-Status: in progress (checkpoints 1–2 of 6 verified)
+Status: in progress (checkpoints 1–3 of 6 verified)
 
 ## Locked artifact
 
@@ -54,3 +54,25 @@ binary SHA-256: 9fc86cfb008b6f7688d05833200938db08be3994071ef45cce443142b21ff2d3
 The integration test creates and drives a real Unix datagram socket inside a
 temporary private runtime directory. It requires no compositor display or
 operator and cleans its exact resources before exiting.
+
+## Checkpoint 3 — divider hit testing and pointer grab
+
+The original divider behavior is represented as a pure temporary state machine
+and a thin seat adapter. Tests lock the exact hit slop, output-coordinate bounds,
+exclusive left-button grab, fractional motion truncation, width direction,
+minimum/maximum clamps, and release behavior.
+
+Verified Cage head: `5a2c8ccff400092b53a6eaf343925c701602bb47`
+
+```text
+pinned Nix Cage build: PASS
+Meson poc-layout-characterization: PASS
+Meson poc-layout-socket: PASS
+Meson poc-resize-characterization: PASS
+Meson total: 3 passed, 0 failed
+clang-format 21.1.8 --dry-run --Werror: PASS
+Nix output: /nix/store/rg7vxkgx8gvlzxaqrjw35ylj95rcm977-cage-0.3.0
+binary SHA-256: 31e499579b02866b3530c585e77ff69bea03edb04e72ec40a3a7da3cbcb07138
+```
+
+The tests run without a compositor display and require no operator input.

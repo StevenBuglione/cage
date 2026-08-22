@@ -58,3 +58,18 @@ The socket integration test proves `0600` permissions, valid delivery,
 nonblocking empty receive, rejection of malformed/embedded-NUL/oversized
 datagrams, idempotent close, and socket-file removal without a display or human
 operator.
+
+### 3. Divider hit testing and pointer grab
+
+- Commits: `1bfdb504cc4cd66c416f0660a96324efe44387f0`,
+  `5a2c8ccff400092b53a6eaf343925c701602bb47`
+- Scope: exact vertical-divider hit slop, exclusive left-button grab, width
+  calculation/clamping, cursor transition, and release
+- Pinned Nix build: PASS
+- Meson tests: 3 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The pure state-machine suite covers layout origins, both hit-slop edges, output
+Y bounds, inactive/duplicate grabs, motion in both directions, fractional
+motion truncation, min/max clamping, release, and invalid calls. Generic
+ResizeBoundary replaces this temporary vertical-only model in M1-WP05.
