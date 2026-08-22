@@ -92,6 +92,7 @@ cage_sources = [
   'output.c',
   'poc_layout.c',
   'poc_layout_socket.c',
+  'poc_resize.c',
   'seat.c',
   'view.c',
   'xdg_shell.c',
@@ -138,6 +139,17 @@ poc_layout_socket_test = executable(
 )
 
 test('poc-layout-socket', poc_layout_socket_test)
+
+poc_resize_test = executable(
+  'poc-resize-test',
+  [
+    'poc_resize.c',
+    'tests/poc_resize_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('poc-resize-characterization', poc_resize_test)
 
 summary = [
   '',

@@ -14,6 +14,7 @@
 #include <wlr/util/log.h>
 
 #include "poc_layout_socket.h"
+#include "poc_resize.h"
 
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -52,6 +53,7 @@ struct cg_server {
 	int poc_browser_width;
 	struct cg_poc_layout_socket poc_layout_socket;
 	struct wl_event_source *poc_layout_source;
+	struct cg_poc_resize_state poc_resize;
 
 	struct wl_listener xdg_toplevel_decoration;
 	struct wl_listener new_xdg_toplevel;

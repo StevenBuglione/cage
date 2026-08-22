@@ -36,6 +36,7 @@
 #endif
 
 #include "output.h"
+#include "poc_resize.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
@@ -610,6 +611,33 @@ handle_cursor_button(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_button);
 	struct wlr_pointer_button_event *event = data;
+	struct cg_server *server = seat->server;
+	struct wlr_box layout_box;
+
+	wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
+	struct cg_poc_rect output = {
+		.x = layout_box.x,
+		.y = layout_box.y,
+		.width = layout_box.width,
+		.height = layout_box.height,
+	};
+
+	if (event->button == BTN_LEFT && event->state == WL_POINTER_BUTTON_STATE_PRESSED &&
+	    cg_poc_resize_begin(&server->poc_resize, output, server->poc_browser_width, seat->cursor->x,
+				seat->cursor->y)) {
+		wlr_seat_pointer_clear_focus(seat->seat);
+		wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, "col-resize");
+		wlr_idle_notifier_v1_notify_activity(server->idle, seat->seat);
+		return;
+	}
+	if (event->button == BTN_LEFT && server->poc_resize.active) {
+		if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
+			cg_poc_resize_end(&server->poc_resize);
+			wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, DEFAULT_XCURSOR);
+		}
+		wlr_idle_notifier_v1_notify_activity(server->idle, seat->seat);
+		return;
+	}
 
 	wlr_seat_pointer_notify_button(seat->seat, event->time_msec, event->button, event->state);
 	press_cursor_button(seat, &event->pointer->base, event->time_msec, event->button, event->state, seat->cursor->x,
@@ -624,8 +652,17 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, doubl
 	double sx, sy;
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct wlr_surface *surface = NULL;
+	struct cg_server *server = seat->server;
+	int width;
 
-	struct cg_view *view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
+	if (cg_poc_resize_update(&server->poc_resize, seat->cursor->x, &width)) {
+		view_set_poc_browser_width(server, width);
+		wlr_seat_pointer_clear_focus(wlr_seat);
+		wlr_idle_notifier_v1_notify_activity(server->idle, seat->seat);
+		return;
+	}
+
+	struct cg_view *view = desktop_view_at(server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
 	if (!view) {
 		wlr_seat_pointer_clear_focus(wlr_seat);
 	} else {
