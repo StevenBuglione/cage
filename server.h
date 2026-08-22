@@ -47,6 +47,7 @@ struct cg_server {
 	struct wl_list outputs; // cg_output::link
 	struct wl_listener new_output;
 	struct wl_listener output_layout_change;
+	int poc_browser_width;
 
 	struct wl_listener xdg_toplevel_decoration;
 	struct wl_listener new_xdg_toplevel;

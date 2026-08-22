@@ -90,6 +90,7 @@ cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
   'output.c',
+  'poc_layout.c',
   'seat.c',
   'view.c',
   'xdg_shell.c',

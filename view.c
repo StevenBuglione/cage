@@ -10,20 +10,63 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/util/log.h>
 
 #include "output.h"
+#include "poc_layout.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
+
+void
+view_configure_poc_layout(struct cg_server *server)
+{
+	const char *value = getenv("CAGE_LINGUUM_BROWSER_WIDTH");
+	int width;
+
+	if (!value || !*value) {
+		server->poc_browser_width = 0;
+		return;
+	}
+
+	if (!cg_poc_layout_parse_width(value, &width)) {
+		wlr_log(WLR_ERROR, "Ignoring invalid CAGE_LINGUUM_BROWSER_WIDTH=%s", value);
+		server->poc_browser_width = 0;
+		return;
+	}
+
+	server->poc_browser_width = width;
+}
+
+bool
+view_set_poc_browser_width(struct cg_server *server, int width)
+{
+	char value[16];
+	int parsed_width;
+
+	if (snprintf(value, sizeof(value), "%d", width) < 0 || !cg_poc_layout_parse_width(value, &parsed_width)) {
+		return false;
+	}
+
+	if (server->poc_browser_width == parsed_width) {
+		return true;
+	}
+
+	server->poc_browser_width = parsed_width;
+	view_position_all(server);
+	wlr_log(WLR_INFO, "POC browser width changed to %d", parsed_width);
+	return true;
+}
 
 char *
 view_get_title(struct cg_view *view)
@@ -33,6 +76,35 @@ view_get_title(struct cg_view *view)
 		return NULL;
 	}
 	return strndup(title, strlen(title));
+}
+
+static enum cg_poc_surface_role
+view_detect_poc_role(struct cg_view *view)
+{
+	char *title = view_get_title(view);
+	enum cg_poc_surface_role role =
+		cg_poc_layout_classify_title(view->server->poc_browser_width > 0, title);
+
+	free(title);
+	return role;
+}
+
+void
+view_update_poc_role(struct cg_view *view)
+{
+	enum cg_poc_surface_role previous = view->poc_role;
+	enum cg_poc_surface_role next = view_detect_poc_role(view);
+
+	view->poc_role = next;
+	if (next != previous) {
+		char *title = view_get_title(view);
+		wlr_log(WLR_INFO, "POC view role changed from %d to %d (title=%s)", previous, next, title ? title : "");
+		free(title);
+	}
+
+	if (view->scene_tree) {
+		view_position(view);
+	}
 }
 
 bool
@@ -95,6 +167,24 @@ view_position(struct cg_view *view)
 {
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
+	struct cg_poc_rect output = {
+		.x = layout_box.x,
+		.y = layout_box.y,
+		.width = layout_box.width,
+		.height = layout_box.height,
+	};
+	struct cg_poc_rect target;
+
+	if (cg_poc_layout_rect(output, view->server->poc_browser_width, view->poc_role, &target)) {
+		struct wlr_box target_box = {
+			.x = target.x,
+			.y = target.y,
+			.width = target.width,
+			.height = target.height,
+		};
+		view_maximize(view, &target_box);
+		return;
+	}
 
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
 		view_maximize(view, &layout_box);
@@ -154,6 +244,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 
 	view->wlr_surface = surface;
 	surface->data = view;
+	view_update_poc_role(view);
 
 #if CAGE_HAS_XWAYLAND
 	/* We shouldn't position override-redirect windows. They set
@@ -206,6 +297,7 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 {
 	view->server = server;
 	view->type = type;
+	view->poc_role = CG_POC_SURFACE_DEFAULT;
 	view->impl = impl;
 }
 

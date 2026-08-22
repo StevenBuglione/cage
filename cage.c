@@ -358,6 +358,7 @@ main(int argc, char *argv[])
 
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
+	view_configure_poc_layout(&server);
 
 	server.output_layout = wlr_output_layout_create(server.wl_display);
 	if (!server.output_layout) {
