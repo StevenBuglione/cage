@@ -509,26 +509,47 @@ cg_surface_control_encode_reset(uint8_t *bytes_out, size_t capacity, size_t *siz
 	return true;
 }
 
+static bool
+encode_identity_event(enum cg_surface_control_message_type type, cg_scene_id scene_id, cg_surface_id surface_id,
+		      enum cg_surface_kind kind, bool has_parent, cg_surface_id parent_surface_id, uint8_t *bytes_out,
+		      size_t capacity, size_t *size_out)
+{
+	if (scene_id == 0 || surface_id == 0 || !cg_surface_kind_is_valid(kind) || !bytes_out ||
+	    capacity < CG_SURFACE_CONTROL_REGISTERED_SIZE || !size_out ||
+	    (has_parent ? parent_surface_id == 0 || parent_surface_id == surface_id : parent_surface_id != 0) ||
+	    (kind == CG_SURFACE_KIND_POPUP && !has_parent)) {
+		return false;
+	}
+	memset(bytes_out, 0, CG_SURFACE_CONTROL_REGISTERED_SIZE);
+	write_header(bytes_out, type, CG_SURFACE_CONTROL_REGISTERED_SIZE);
+	write_u64(bytes_out + 8, scene_id);
+	write_u64(bytes_out + 16, surface_id);
+	bytes_out[24] = (uint8_t) kind;
+	bytes_out[25] = has_parent ? 1 : 0;
+	write_u64(bytes_out + 28, parent_surface_id);
+	*size_out = CG_SURFACE_CONTROL_REGISTERED_SIZE;
+	return true;
+}
+
+bool
+cg_surface_control_encode_registered(const struct cg_surface_registration_request *request, uint8_t *bytes_out,
+				     size_t capacity, size_t *size_out)
+{
+	if (!registration_fields_valid(request)) {
+		return false;
+	}
+	return encode_identity_event(CG_SURFACE_CONTROL_REGISTERED, request->scene_id, request->surface_id, request->kind,
+				     request->has_parent, request->parent_surface_id, bytes_out, capacity, size_out);
+}
+
 bool
 cg_surface_control_encode_associated(const struct cg_surface_identity *identity, uint8_t *bytes_out, size_t capacity,
 				     size_t *size_out)
 {
-	if (!identity || identity->scene_id == 0 || identity->surface_id == 0 ||
-	    !cg_surface_kind_is_valid(identity->kind) || !bytes_out || capacity < CG_SURFACE_CONTROL_ASSOCIATED_SIZE ||
-	    !size_out ||
-	    (identity->has_parent
-		     ? identity->parent_surface_id == 0 || identity->parent_surface_id == identity->surface_id
-		     : identity->parent_surface_id != 0) ||
-	    (identity->kind == CG_SURFACE_KIND_POPUP && !identity->has_parent)) {
+	if (!identity) {
 		return false;
 	}
-	memset(bytes_out, 0, CG_SURFACE_CONTROL_ASSOCIATED_SIZE);
-	write_header(bytes_out, CG_SURFACE_CONTROL_ASSOCIATED, CG_SURFACE_CONTROL_ASSOCIATED_SIZE);
-	write_u64(bytes_out + 8, identity->scene_id);
-	write_u64(bytes_out + 16, identity->surface_id);
-	bytes_out[24] = (uint8_t) identity->kind;
-	bytes_out[25] = identity->has_parent ? 1 : 0;
-	write_u64(bytes_out + 28, identity->parent_surface_id);
-	*size_out = CG_SURFACE_CONTROL_ASSOCIATED_SIZE;
-	return true;
+	return encode_identity_event(CG_SURFACE_CONTROL_ASSOCIATED, identity->scene_id, identity->surface_id,
+				     identity->kind, identity->has_parent, identity->parent_surface_id, bytes_out,
+				     capacity, size_out);
 }

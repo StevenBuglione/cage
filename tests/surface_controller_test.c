@@ -113,6 +113,18 @@ send_bytes(int fd, const uint8_t *bytes, size_t size)
 	assert(send(fd, bytes, size, 0) == (ssize_t) size);
 }
 
+static void
+expect_registered(int fd, uint8_t *bytes, size_t capacity, cg_surface_id surface_id)
+{
+	assert(recv(fd, bytes, capacity, 0) == CG_SURFACE_CONTROL_REGISTERED_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x80\x00\x28", 8) == 0);
+	uint64_t encoded_surface_id = 0;
+	for (size_t index = 0; index < 8; index++) {
+		encoded_surface_id = encoded_surface_id << 8 | bytes[16 + index];
+	}
+	assert(encoded_surface_id == surface_id);
+}
+
 int
 main(void)
 {
@@ -156,6 +168,7 @@ main(void)
 	assert(cg_surface_control_encode_register(&register_request, bytes, sizeof(bytes), &size));
 	send_bytes(client, bytes, size);
 	dispatch(event_loop);
+	expect_registered(client, bytes, sizeof(bytes), 100);
 	assert(controller.applied_messages == 1);
 	assert(controller.rejected_messages == 0);
 	assert(cg_surface_registry_find(&registry, 7, 100)->state == CG_SURFACE_REGISTRATION_PENDING);
@@ -205,6 +218,7 @@ main(void)
 	assert(cg_surface_control_encode_register(&register_request, bytes, sizeof(bytes), &size));
 	send_bytes(client, bytes, size);
 	dispatch(event_loop);
+	expect_registered(client, bytes, sizeof(bytes), 101);
 	assert(registry.registrations == 1);
 	assert(close(client) == 0);
 	dispatch(event_loop);
@@ -233,6 +247,7 @@ main(void)
 	assert(cg_surface_control_encode_register(&register_request, bytes, sizeof(bytes), &size));
 	send_bytes(client, bytes, size);
 	dispatch(event_loop);
+	expect_registered(client, bytes, sizeof(bytes), 102);
 	struct cg_scene_snapshot snapshot = {
 		.scene_id = 7,
 		.output_id = 11,

@@ -14,6 +14,7 @@
 #define CG_SURFACE_CONTROL_REGISTER_SIZE 72
 #define CG_SURFACE_CONTROL_UNREGISTER_SIZE 24
 #define CG_SURFACE_CONTROL_RESET_SIZE 8
+#define CG_SURFACE_CONTROL_REGISTERED_SIZE 40
 #define CG_SURFACE_CONTROL_ASSOCIATED_SIZE 40
 #define CG_SURFACE_CONTROL_CREATE_SCENE_SIZE 32
 #define CG_SURFACE_CONTROL_DESTROY_SCENE_SIZE 16
@@ -36,6 +37,7 @@ enum cg_surface_control_message_type {
 	CG_SURFACE_CONTROL_DESTROY_SCENE = 5,
 	CG_SURFACE_CONTROL_APPLY_SCENE = 6,
 	CG_SURFACE_CONTROL_RESIZE_OUTPUT = 7,
+	CG_SURFACE_CONTROL_REGISTERED = 0x80,
 	CG_SURFACE_CONTROL_ASSOCIATED = 0x81,
 	CG_SURFACE_CONTROL_BOUNDS_CHANGING = 0x82,
 	CG_SURFACE_CONTROL_BOUNDS_COMMITTED = 0x83,
@@ -95,6 +97,8 @@ bool cg_surface_control_encode_register(const struct cg_surface_registration_req
 bool cg_surface_control_encode_unregister(const struct cg_surface_control_unregister *request, uint8_t *bytes_out,
 					  size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_reset(uint8_t *bytes_out, size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_registered(const struct cg_surface_registration_request *request, uint8_t *bytes_out,
+					  size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_associated(const struct cg_surface_identity *identity, uint8_t *bytes_out,
 					  size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_create_scene(const struct cg_surface_control_create_scene *request, uint8_t *bytes_out,

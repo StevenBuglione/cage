@@ -97,6 +97,22 @@ test_associated_golden_vector(void)
 	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_UNKNOWN_TYPE);
 }
 
+static void
+test_registered_golden_vector(void)
+{
+	struct cg_surface_registration_request request = registration();
+	uint8_t bytes[CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE];
+	size_t size = 0;
+
+	assert(cg_surface_control_encode_registered(&request, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_REGISTERED_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x80\x00\x28", 8) == 0);
+	assert(memcmp(bytes + 8, "\x01\x02\x03\x04\x05\x06\x07\x08", 8) == 0);
+	assert(memcmp(bytes + 16, "\x11\x12\x13\x14\x15\x16\x17\x18", 8) == 0);
+	assert(bytes[24] == CG_SURFACE_KIND_POPUP && bytes[25] == 1);
+	assert(memcmp(bytes + 28, "!\x22#$%&'(\x00\x00\x00\x00", 12) == 0);
+}
+
 static struct cg_scene_snapshot
 scene_snapshot(void)
 {
@@ -360,6 +376,7 @@ main(void)
 	test_register_golden_vector();
 	test_unregister_and_reset();
 	test_associated_golden_vector();
+	test_registered_golden_vector();
 	test_scene_control_round_trip();
 	test_scene_message_rejection_and_capacity();
 	test_resize_event_golden_vector();

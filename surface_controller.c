@@ -95,6 +95,26 @@ disconnect_client(struct cg_surface_controller *controller)
 	controller->disconnects++;
 }
 
+static bool
+send_registered(struct cg_surface_controller *controller, const struct cg_surface_registration_request *request)
+{
+	uint8_t bytes[CG_SURFACE_CONTROL_REGISTERED_SIZE];
+	size_t size;
+	ssize_t sent;
+
+	if (!controller || controller->client_fd < 0 ||
+	    !cg_surface_control_encode_registered(request, bytes, sizeof(bytes), &size)) {
+		return false;
+	}
+	sent = send(controller->client_fd, bytes, size, MSG_NOSIGNAL);
+	if (sent == (ssize_t) size) {
+		return true;
+	}
+	controller->receive_errors++;
+	disconnect_client(controller);
+	return false;
+}
+
 static void
 apply_message(struct cg_surface_controller *controller, const struct cg_surface_control_message *message)
 {
@@ -107,6 +127,9 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 		controller->last_registry_result = cg_surface_registry_register(
 			controller->registry, &message->registration, controller->now(controller->now_data));
 		applied = controller->last_registry_result == CG_SURFACE_REGISTRY_OK;
+		if (applied) {
+			applied = send_registered(controller, &message->registration);
+		}
 		break;
 	case CG_SURFACE_CONTROL_UNREGISTER:
 		controller->last_registry_result = cg_surface_registry_retire(
@@ -167,6 +190,7 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 		}
 		break;
 	}
+	case CG_SURFACE_CONTROL_REGISTERED:
 	case CG_SURFACE_CONTROL_ASSOCIATED:
 	case CG_SURFACE_CONTROL_BOUNDS_CHANGING:
 	case CG_SURFACE_CONTROL_BOUNDS_COMMITTED:
