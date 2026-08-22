@@ -13,8 +13,9 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/log.h>
 
-#include "poc_layout_controller.h"
 #include "poc_resize.h"
+#include "surface_controller.h"
+#include "surface_registry.h"
 
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -51,8 +52,9 @@ struct cg_server {
 	struct wl_listener new_output;
 	struct wl_listener output_layout_change;
 	int poc_browser_width;
-	struct cg_poc_layout_controller poc_layout_controller;
 	struct cg_poc_resize_state poc_resize;
+	struct cg_surface_registry surface_registry;
+	struct cg_surface_controller surface_controller;
 
 	struct wl_listener xdg_toplevel_decoration;
 	struct wl_listener new_xdg_toplevel;

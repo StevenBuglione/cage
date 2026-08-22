@@ -91,10 +91,12 @@ cage_sources = [
   'idle_inhibit_v1.c',
   'output.c',
   'poc_layout.c',
-  'poc_layout_controller.c',
-  'poc_layout_socket.c',
   'poc_resize.c',
   'seat.c',
+  'surface_control_protocol.c',
+  'surface_controller.c',
+  'surface_registry.c',
+  'surface_token_hint.c',
   'view.c',
   'xdg_shell.c',
   configure_file(input: 'config.h.in',
@@ -189,6 +191,20 @@ surface_control_protocol_test = executable(
 )
 
 test('surface-control-protocol', surface_control_protocol_test)
+
+surface_controller_test = executable(
+  'surface-controller-test',
+  [
+    'surface_control_protocol.c',
+    'surface_controller.c',
+    'surface_registry.c',
+    'tests/surface_controller_test.c',
+  ],
+  dependencies: wayland_server,
+  include_directories: include_directories('.'),
+)
+
+test('surface-controller-lifecycle', surface_controller_test)
 
 summary = [
   '',

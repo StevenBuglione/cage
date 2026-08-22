@@ -55,9 +55,9 @@
 
 #include "idle_inhibit_v1.h"
 #include "output.h"
-#include "poc_layout_controller.h"
 #include "seat.h"
 #include "server.h"
+#include "surface_controller.h"
 #include "view.h"
 #include "xdg_shell.h"
 #if CAGE_HAS_XWAYLAND
@@ -115,24 +115,18 @@ sigchld_handler(int fd, uint32_t mask, void *data)
 }
 
 static bool
-apply_poc_layout_width(void *data, int width)
+setup_surface_controller(struct cg_server *server, struct wl_event_loop *event_loop)
 {
-	return view_set_poc_browser_width(data, width);
-}
-
-static bool
-setup_poc_layout_socket(struct cg_server *server, struct wl_event_loop *event_loop)
-{
-	const char *path = getenv("CAGE_LINGUUM_LAYOUT_SOCKET");
+	const char *path = getenv("CAGE_FRAMEWORK_CONTROL_SOCKET");
 	const char *runtime_dir = getenv("XDG_RUNTIME_DIR");
 
 	if (!path || !*path) {
 		return true;
 	}
 
-	if (!cg_poc_layout_controller_start(&server->poc_layout_controller, event_loop, path, runtime_dir,
-					    apply_poc_layout_width, server)) {
-		wlr_log_errno(WLR_ERROR, "Unable to create POC layout socket");
+	if (!cg_surface_controller_start(
+		    &server->surface_controller, event_loop, path, runtime_dir, &server->surface_registry, NULL, NULL)) {
+		wlr_log_errno(WLR_ERROR, "Unable to create framework surface controller");
 		return false;
 	}
 
@@ -319,7 +313,10 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	struct cg_server server = {.log_level = WLR_INFO, .poc_layout_controller = {.socket = {.fd = -1}}};
+	struct cg_server server = {
+		.log_level = WLR_INFO,
+		.surface_controller = {.listener_fd = -1, .client_fd = -1},
+	};
 	struct wl_event_source *sigchld_source = NULL;
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
@@ -384,7 +381,8 @@ main(int argc, char *argv[])
 
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
-	cg_poc_layout_controller_init(&server.poc_layout_controller);
+	cg_surface_registry_init(&server.surface_registry);
+	cg_surface_controller_init(&server.surface_controller);
 	view_configure_poc_layout(&server);
 
 	server.output_layout = wlr_output_layout_create(server.wl_display);
@@ -395,7 +393,7 @@ main(int argc, char *argv[])
 	}
 	server.output_layout_change.notify = handle_output_layout_change;
 	wl_signal_add(&server.output_layout->events.change, &server.output_layout_change);
-	if (!setup_poc_layout_socket(&server, event_loop)) {
+	if (!setup_surface_controller(&server, event_loop)) {
 		ret = 1;
 		goto end;
 	}
@@ -696,7 +694,7 @@ end:
 	if (sigchld_source) {
 		wl_event_source_remove(sigchld_source);
 	}
-	cg_poc_layout_controller_stop(&server.poc_layout_controller);
+	cg_surface_controller_stop(&server.surface_controller);
 	seat_destroy(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
