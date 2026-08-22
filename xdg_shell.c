@@ -125,6 +125,13 @@ get_title(struct cg_view *view)
 	return xdg_shell_view->xdg_toplevel->title;
 }
 
+static const char *
+get_app_id(struct cg_view *view)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	return xdg_shell_view->xdg_toplevel->app_id;
+}
+
 static void
 get_geometry(struct cg_view *view, int *width_out, int *height_out)
 {
@@ -205,9 +212,7 @@ handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 	 * Certain clients do not like figuring out their own window geometry if they
 	 * display in fullscreen mode, so we set it here.
 	 */
-	struct wlr_box layout_box;
-	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
-	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
+	view_position(&xdg_shell_view->view);
 	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, fullscreen);
 	wlr_foreign_toplevel_handle_v1_set_fullscreen(xdg_shell_view->view.foreign_toplevel_handle, fullscreen);
 }
@@ -239,6 +244,18 @@ handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_xdg_toplevel_set_title(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, set_title);
+	struct cg_view *view = &xdg_shell_view->view;
+
+	if (view->foreign_toplevel_handle && xdg_shell_view->xdg_toplevel->title) {
+		wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle,
+							 xdg_shell_view->xdg_toplevel->title);
+	}
+}
+
+static void
 handle_xdg_toplevel_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
@@ -262,6 +279,7 @@ handle_xdg_toplevel_destroy(struct wl_listener *listener, void *data)
 
 	wl_list_remove(&xdg_shell_view->commit.link);
 	wl_list_remove(&xdg_shell_view->map.link);
+	wl_list_remove(&xdg_shell_view->set_title.link);
 	wl_list_remove(&xdg_shell_view->unmap.link);
 	wl_list_remove(&xdg_shell_view->destroy.link);
 	wl_list_remove(&xdg_shell_view->request_fullscreen.link);
@@ -272,6 +290,7 @@ handle_xdg_toplevel_destroy(struct wl_listener *listener, void *data)
 
 static const struct cg_view_impl xdg_shell_view_impl = {
 	.get_title = get_title,
+	.get_app_id = get_app_id,
 	.get_geometry = get_geometry,
 	.is_primary = is_primary,
 	.is_transient_for = is_transient_for,
@@ -300,6 +319,8 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	wl_signal_add(&toplevel->base->surface->events.commit, &xdg_shell_view->commit);
 	xdg_shell_view->map.notify = handle_xdg_toplevel_map;
 	wl_signal_add(&toplevel->base->surface->events.map, &xdg_shell_view->map);
+	xdg_shell_view->set_title.notify = handle_xdg_toplevel_set_title;
+	wl_signal_add(&toplevel->events.set_title, &xdg_shell_view->set_title);
 	xdg_shell_view->unmap.notify = handle_xdg_toplevel_unmap;
 	wl_signal_add(&toplevel->base->surface->events.unmap, &xdg_shell_view->unmap);
 	xdg_shell_view->destroy.notify = handle_xdg_toplevel_destroy;

@@ -13,6 +13,7 @@
 #endif
 
 #include "server.h"
+#include "surface_view_policy.h"
 
 enum cg_view_type {
 	CAGE_XDG_SHELL_VIEW,
@@ -31,6 +32,11 @@ struct cg_view {
 	int lx, ly;
 
 	enum cg_view_type type;
+	struct cg_surface_view_policy surface_policy;
+	bool scene_present;
+	bool scene_visible;
+	bool scene_accepts_input;
+	int32_t scene_z_index;
 	const struct cg_view_impl *impl;
 
 	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel_handle;
@@ -40,6 +46,7 @@ struct cg_view {
 
 struct cg_view_impl {
 	char *(*get_title)(struct cg_view *view);
+	const char *(*get_app_id)(struct cg_view *view);
 	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
 	bool (*is_primary)(struct cg_view *view);
 	bool (*is_transient_for)(struct cg_view *child, struct cg_view *parent);
@@ -50,9 +57,14 @@ struct cg_view_impl {
 };
 
 char *view_get_title(struct cg_view *view);
+const char *view_get_app_id(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
 bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
 void view_activate(struct cg_view *view, bool activate);
+bool view_accepts_input(const struct cg_view *view);
+void view_apply_scene_state(struct cg_view *view);
+void view_apply_surface_state(struct cg_server *server, cg_scene_id scene_id, cg_surface_id surface_id);
+void view_handle_surface_controller_event(const struct cg_surface_controller_event *event, void *data);
 void view_position(struct cg_view *view);
 void view_position_all(struct cg_server *server);
 void view_unmap(struct cg_view *view);

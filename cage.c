@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <signal.h>
@@ -57,22 +58,12 @@
 #include "output.h"
 #include "seat.h"
 #include "server.h"
+#include "surface_controller.h"
 #include "view.h"
 #include "xdg_shell.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
-
-void
-server_terminate(struct cg_server *server)
-{
-	// Workaround for https://gitlab.freedesktop.org/wayland/wayland/-/merge_requests/421
-	if (server->terminated) {
-		return;
-	}
-
-	wl_display_terminate(server->wl_display);
-}
 
 static void
 handle_display_destroy(struct wl_listener *listener, void *data)
@@ -111,6 +102,26 @@ sigchld_handler(int fd, uint32_t mask, void *data)
 	server->return_app_code = true;
 	server_terminate(server);
 	return 0;
+}
+
+static bool
+setup_surface_controller(struct cg_server *server, struct wl_event_loop *event_loop)
+{
+	const char *path = getenv("CAGE_FRAMEWORK_CONTROL_SOCKET");
+	const char *runtime_dir = getenv("XDG_RUNTIME_DIR");
+
+	if (!path || !*path) {
+		return true;
+	}
+
+	if (!cg_surface_controller_start(&server->surface_controller, event_loop, path, runtime_dir,
+					 &server->surface_registry, &server->scene_model, NULL, NULL,
+					 view_handle_surface_controller_event, server)) {
+		wlr_log_errno(WLR_ERROR, "Unable to create framework surface controller");
+		return false;
+	}
+
+	return true;
 }
 
 static bool
@@ -176,11 +187,20 @@ spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, str
 }
 
 static int
-cleanup_primary_client(pid_t pid)
+cleanup_primary_client(pid_t pid, bool request_termination)
 {
 	int status;
 
-	waitpid(pid, &status, 0);
+	if (request_termination && kill(pid, SIGTERM) < 0 && errno != ESRCH) {
+		wlr_log_errno(WLR_ERROR, "Unable to terminate primary client with pid %d", pid);
+	}
+
+	while (waitpid(pid, &status, 0) < 0) {
+		if (errno != EINTR) {
+			wlr_log_errno(WLR_ERROR, "Unable to wait for primary client with pid %d", pid);
+			return 1;
+		}
+	}
 
 	if (WIFEXITED(status)) {
 		wlr_log(WLR_DEBUG, "Child exited normally with exit status %d", WEXITSTATUS(status));
@@ -293,7 +313,10 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	struct cg_server server = {.log_level = WLR_INFO};
+	struct cg_server server = {
+		.log_level = WLR_INFO,
+		.surface_controller = {.listener_fd = -1, .client_fd = -1},
+	};
 	struct wl_event_source *sigchld_source = NULL;
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
@@ -358,6 +381,10 @@ main(int argc, char *argv[])
 
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
+	cg_surface_registry_init(&server.surface_registry);
+	cg_scene_model_init(&server.scene_model);
+	cg_resize_session_init(&server.resize_session);
+	cg_surface_controller_init(&server.surface_controller);
 
 	server.output_layout = wlr_output_layout_create(server.wl_display);
 	if (!server.output_layout) {
@@ -367,6 +394,10 @@ main(int argc, char *argv[])
 	}
 	server.output_layout_change.notify = handle_output_layout_change;
 	wl_signal_add(&server.output_layout->events.change, &server.output_layout_change);
+	if (!setup_surface_controller(&server, event_loop)) {
+		ret = 1;
+		goto end;
+	}
 
 	server.scene = wlr_scene_create();
 	if (!server.scene) {
@@ -627,6 +658,12 @@ main(int argc, char *argv[])
 
 	seat_center_cursor(server.seat);
 	wl_display_run(server.wl_display);
+	if (pid != 0) {
+		/* Let the primary client close its owned surfaces before the display
+		 * tears down their Wayland resources. */
+		app_ret = cleanup_primary_client(pid, true);
+		pid = 0;
+	}
 
 #if CAGE_HAS_XWAYLAND
 	if (xwayland) {
@@ -655,7 +692,7 @@ main(int argc, char *argv[])
 
 end:
 	if (pid != 0)
-		app_ret = cleanup_primary_client(pid);
+		app_ret = cleanup_primary_client(pid, true);
 	if (!ret && server.return_app_code)
 		ret = app_ret;
 
@@ -664,6 +701,7 @@ end:
 	if (sigchld_source) {
 		wl_event_source_remove(sigchld_source);
 	}
+	cg_surface_controller_stop(&server.surface_controller);
 	seat_destroy(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */

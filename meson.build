@@ -90,7 +90,15 @@ cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
   'output.c',
+  'resize_boundary.c',
+  'scene_model.c',
   'seat.c',
+  'server_lifecycle.c',
+  'surface_control_protocol.c',
+  'surface_controller.c',
+  'surface_registry.c',
+  'surface_token_hint.c',
+  'surface_view_policy.c',
   'view.c',
   'xdg_shell.c',
   configure_file(input: 'config.h.in',
@@ -112,6 +120,151 @@ executable(
     math,
   ],
   install: true,
+)
+
+poc_layout_test = executable(
+  'poc-layout-test',
+  [
+    'poc_layout.c',
+    'tests/poc_title_fixture.c',
+    'tests/poc_layout_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('poc-layout-characterization', poc_layout_test)
+
+poc_layout_socket_test = executable(
+  'poc-layout-socket-test',
+  [
+    'poc_layout.c',
+    'poc_layout_socket.c',
+    'tests/poc_layout_socket_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('poc-layout-socket', poc_layout_socket_test)
+
+poc_layout_controller_test = executable(
+  'poc-layout-controller-test',
+  [
+    'poc_layout.c',
+    'poc_layout_controller.c',
+    'poc_layout_socket.c',
+    'tests/poc_layout_controller_test.c',
+  ],
+  dependencies: wayland_server,
+  include_directories: include_directories('.'),
+)
+
+test('poc-layout-controller-lifecycle', poc_layout_controller_test)
+
+poc_resize_test = executable(
+  'poc-resize-test',
+  [
+    'poc_resize.c',
+    'tests/poc_resize_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('poc-resize-characterization', poc_resize_test)
+
+surface_registry_test = executable(
+  'surface-registry-test',
+  [
+    'surface_registry.c',
+    'surface_token_hint.c',
+    'tests/surface_registry_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('surface-registry', surface_registry_test)
+
+surface_control_protocol_test = executable(
+  'surface-control-protocol-test',
+  [
+    'surface_control_protocol.c',
+    'surface_registry.c',
+    'tests/surface_control_protocol_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('surface-control-protocol', surface_control_protocol_test)
+
+surface_controller_test = executable(
+  'surface-controller-test',
+  [
+    'surface_control_protocol.c',
+    'surface_controller.c',
+    'scene_model.c',
+    'surface_registry.c',
+    'tests/surface_controller_test.c',
+  ],
+  dependencies: wayland_server,
+  include_directories: include_directories('.'),
+)
+
+test('surface-controller-lifecycle', surface_controller_test)
+
+surface_view_policy_test = executable(
+  'surface-view-policy-test',
+  [
+    'surface_registry.c',
+    'surface_token_hint.c',
+    'surface_view_policy.c',
+    'tests/surface_view_policy_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('surface-view-policy', surface_view_policy_test)
+
+scene_model_test = executable(
+  'scene-model-test',
+  [
+    'scene_model.c',
+    'surface_registry.c',
+    'tests/scene_model_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('scene-model', scene_model_test)
+
+resize_boundary_test = executable(
+  'resize-boundary-test',
+  [
+    'resize_boundary.c',
+    'scene_model.c',
+    'surface_registry.c',
+    'tests/resize_boundary_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('resize-boundary', resize_boundary_test)
+
+server_lifecycle_test = executable(
+  'server-lifecycle-test',
+  [
+    'server_lifecycle.c',
+    'tests/server_lifecycle_test.c',
+  ],
+  dependencies: [wayland_server, wlroots],
+  include_directories: include_directories('.'),
+)
+
+test('server-lifecycle', server_lifecycle_test)
+
+python = import('python').find_installation()
+test(
+  'framework-source-policy',
+  python,
+  args: [files('tests/source_policy_test.py'), meson.project_source_root()],
 )
 
 summary = [
