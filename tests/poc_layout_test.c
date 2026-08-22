@@ -83,6 +83,20 @@ test_title_classification(void)
 }
 
 static void
+test_title_change_reclassification(void)
+{
+	enum cg_poc_surface_role role = cg_poc_layout_classify_title(true, "Firefox");
+
+	assert(role == CG_POC_SURFACE_BROWSER);
+	role = cg_poc_layout_classify_title(true, "Linguum Workspace — renamed");
+	assert(role == CG_POC_SURFACE_WORKSPACE);
+	role = cg_poc_layout_classify_title(true, "Linguum Browser Controls — renamed");
+	assert(role == CG_POC_SURFACE_CONTROLS);
+	role = cg_poc_layout_classify_title(false, "Linguum Workspace");
+	assert(role == CG_POC_SURFACE_DEFAULT);
+}
+
+static void
 test_three_surface_rectangles(void)
 {
 	const struct cg_poc_rect output = {.x = 13, .y = 17, .width = 1440, .height = 900};
@@ -155,6 +169,7 @@ main(void)
 	test_layout_message_parser();
 	test_socket_path_validation();
 	test_title_classification();
+	test_title_change_reclassification();
 	test_three_surface_rectangles();
 	test_narrow_output_fallback();
 	test_minimum_target_dimensions();
