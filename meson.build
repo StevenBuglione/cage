@@ -221,6 +221,13 @@ surface_view_policy_test = executable(
 
 test('surface-view-policy', surface_view_policy_test)
 
+python = import('python').find_installation()
+test(
+  'framework-source-policy',
+  python,
+  args: [files('tests/source_policy_test.py'), meson.project_source_root()],
+)
+
 summary = [
   '',
   'Cage @0@'.format(version),
