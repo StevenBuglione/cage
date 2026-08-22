@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <signal.h>
@@ -186,11 +187,20 @@ spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, str
 }
 
 static int
-cleanup_primary_client(pid_t pid)
+cleanup_primary_client(pid_t pid, bool request_termination)
 {
 	int status;
 
-	waitpid(pid, &status, 0);
+	if (request_termination && kill(pid, SIGTERM) < 0 && errno != ESRCH) {
+		wlr_log_errno(WLR_ERROR, "Unable to terminate primary client with pid %d", pid);
+	}
+
+	while (waitpid(pid, &status, 0) < 0) {
+		if (errno != EINTR) {
+			wlr_log_errno(WLR_ERROR, "Unable to wait for primary client with pid %d", pid);
+			return 1;
+		}
+	}
 
 	if (WIFEXITED(status)) {
 		wlr_log(WLR_DEBUG, "Child exited normally with exit status %d", WEXITSTATUS(status));
@@ -648,6 +658,12 @@ main(int argc, char *argv[])
 
 	seat_center_cursor(server.seat);
 	wl_display_run(server.wl_display);
+	if (pid != 0) {
+		/* Let the primary client close its owned surfaces before the display
+		 * tears down their Wayland resources. */
+		app_ret = cleanup_primary_client(pid, true);
+		pid = 0;
+	}
 
 #if CAGE_HAS_XWAYLAND
 	if (xwayland) {
@@ -676,7 +692,7 @@ main(int argc, char *argv[])
 
 end:
 	if (pid != 0)
-		app_ret = cleanup_primary_client(pid);
+		app_ret = cleanup_primary_client(pid, true);
 	if (!ret && server.return_app_code)
 		ret = app_ret;
 
