@@ -136,3 +136,18 @@ The registry test covers invalid/zero fields, duplicate IDs/tokens/surfaces,
 unknown/stale/replayed tokens, required popup parent, invalid parent, timeout
 bounds/overflow, capacity, retirement, reset token erasure, and token-hint
 encoding/decoding. It contains no application, provider, or browser identity.
+
+### 8. Bounded surface-control protocol
+
+- Commits: `e101535abd23134dd7ddc5c7aa72878ab0f60a49`,
+  `96c80f234419648b5ddb6f5533ce87f67ac3c03b`
+- Scope: explicit versioned register, unregister, and reset messages with
+  network-byte-order IDs, surface kind, parent, timeout, and 256-bit token
+- Pinned Nix build: PASS
+- Meson tests: 6 passed, 0 failed
+- clang-format 21.1.8: PASS
+
+The protocol suite locks golden bytes and rejects every truncation, oversized
+and declared-length mismatch, bad magic/version/type, nonzero reserved bits,
+zero/invalid fields, invalid popup parent semantics, and insufficient encoder
+buffers. The maximum accepted datagram is 72 bytes.

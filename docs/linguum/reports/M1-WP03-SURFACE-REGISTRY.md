@@ -1,6 +1,6 @@
 # M1-WP03 — Explicit Surface Registry
 
-Status: in progress (checkpoint 1 verified)
+Status: in progress (checkpoints 1–2 verified)
 
 ## Checkpoint 1 — pure registry and token hint
 
@@ -33,6 +33,30 @@ Tested fail-closed cases:
 
 The token hint is framework-controlled metadata, not a page title. No web,
 account, media, protected-pixel, display, or human input was used.
+
+## Checkpoint 2 — bounded explicit controller protocol
+
+The temporary M1 protocol carries explicit register, unregister, and reset
+messages. Its fixed header includes magic, version, type, and exact length. The
+register body contains network-byte-order scene/surface/parent IDs, kind,
+parent-present flag, timeout, reserved bytes, and a 32-byte token. Maximum size
+is 72 bytes.
+
+Verified Cage head: `96c80f234419648b5ddb6f5533ce87f67ac3c03b`
+
+```text
+local GCC warnings-as-errors protocol suite: PASS
+pinned Nix Cage build: PASS
+surface-control-protocol Meson suite: PASS
+all focused Meson suites: 6 passed, 0 failed
+clang-format 21.1.8 --dry-run --Werror: PASS
+Nix output: /nix/store/rsa4a4fbkxfaay0q8chx4iacxykp9757-cage-0.3.0
+binary SHA-256: 7fe7025b7baee6c10a82f50ed2e24dd45afe8bf8434bc861501b17eb3129c709
+```
+
+The test locks golden network-order bytes and rejects truncation at every
+length, oversized/trailing bytes, declared-length mismatch, bad magic/version/
+type, reserved bits, zero or inconsistent fields, and undersized encoders.
 
 ## Remaining gate
 

@@ -150,3 +150,21 @@ Output:
 /nix/store/7hg8s9mba716ms8jns8qsby95vyfdl39-cage-0.3.0
 binary SHA-256: 36adfa29abfd13b4d21633da4a460cdc17073fc44aff1385efa837e087bfb43c
 ```
+
+## M1-WP03 checkpoint 2 — surface-control protocol
+
+| Component | Exact version/source | Result |
+|---|---|---|
+| Cage source | `96c80f234419648b5ddb6f5533ce87f67ac3c03b` | PASS |
+| bounded binary protocol | Meson test | PASS |
+| all focused Meson suites | 6 passed, 0 failed | PASS |
+| source formatting | clang-format `21.1.8` | PASS |
+| warnings | upstream `werror=true` | PASS |
+| human intervention | none | PASS |
+
+Output:
+
+```text
+/nix/store/rsa4a4fbkxfaay0q8chx4iacxykp9757-cage-0.3.0
+binary SHA-256: 7fe7025b7baee6c10a82f50ed2e24dd45afe8bf8434bc861501b17eb3129c709
+```
