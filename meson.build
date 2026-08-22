@@ -166,6 +166,18 @@ poc_resize_test = executable(
 
 test('poc-resize-characterization', poc_resize_test)
 
+surface_registry_test = executable(
+  'surface-registry-test',
+  [
+    'surface_registry.c',
+    'surface_token_hint.c',
+    'tests/surface_registry_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('surface-registry', surface_registry_test)
+
 summary = [
   '',
   'Cage @0@'.format(version),
