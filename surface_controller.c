@@ -113,6 +113,8 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 		controller->last_registry_result = CG_SURFACE_REGISTRY_OK;
 		emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0);
 		break;
+	case CG_SURFACE_CONTROL_ASSOCIATED:
+		break;
 	}
 	if (controller->last_registry_result == CG_SURFACE_REGISTRY_OK) {
 		controller->applied_messages++;
