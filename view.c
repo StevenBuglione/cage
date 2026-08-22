@@ -78,31 +78,98 @@ view_get_title(struct cg_view *view)
 	return strndup(title, strlen(title));
 }
 
-static enum cg_poc_surface_role
-view_detect_poc_role(struct cg_view *view)
+const char *
+view_get_app_id(struct cg_view *view)
 {
-	char *title = view_get_title(view);
-	enum cg_poc_surface_role role = cg_poc_layout_classify_title(view->server->poc_browser_width > 0, title);
+	return view->impl->get_app_id(view);
+}
 
-	free(title);
-	return role;
+static enum cg_poc_surface_role
+view_role_from_surface_kind(enum cg_surface_kind kind)
+{
+	switch (kind) {
+	case CG_SURFACE_KIND_APP_VIEW:
+		return CG_POC_SURFACE_WORKSPACE;
+	case CG_SURFACE_KIND_OVERLAY:
+		return CG_POC_SURFACE_CONTROLS;
+	case CG_SURFACE_KIND_FIREFOX_VIEW:
+	case CG_SURFACE_KIND_POPUP:
+		return CG_POC_SURFACE_BROWSER;
+	}
+	return CG_POC_SURFACE_DEFAULT;
+}
+
+bool
+view_accepts_input(const struct cg_view *view)
+{
+	return view && cg_surface_view_policy_accepts_input(&view->surface_policy);
+}
+
+static void
+view_quarantine(struct cg_view *view)
+{
+	if (!view) {
+		return;
+	}
+	if (view->surface_policy.state != CG_SURFACE_VIEW_QUARANTINED) {
+		cg_surface_view_policy_quarantine(&view->surface_policy);
+	}
+	if (view->scene_tree) {
+		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
+	}
+	if (view->server->seat) {
+		seat_clear_focus(view->server->seat, view);
+	}
+}
+
+static bool
+view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
+{
+	struct cg_surface_controller *controller = &view->server->surface_controller;
+	bool registry_required = controller->accepting;
+	bool new_association = registry_required && view->surface_policy.state == CG_SURFACE_VIEW_UNMANAGED;
+
+	if (!cg_surface_view_policy_associate(&view->surface_policy, registry_required,
+					      &view->server->surface_registry, view_get_app_id(view),
+					      (uintptr_t) surface, cg_surface_controller_now(controller))) {
+		view_quarantine(view);
+		return false;
+	}
+	if (!registry_required) {
+		view->poc_role = CG_POC_SURFACE_DEFAULT;
+		return true;
+	}
+	view->poc_role = view_role_from_surface_kind(view->surface_policy.identity.kind);
+	if (new_association &&
+	    !cg_surface_controller_notify_associated(controller, &view->surface_policy.identity)) {
+		struct cg_surface_identity identity = view->surface_policy.identity;
+		(void) cg_surface_registry_retire(&view->server->surface_registry, identity.scene_id,
+						  identity.surface_id);
+		view_quarantine(view);
+		return false;
+	}
+	return true;
 }
 
 void
-view_update_poc_role(struct cg_view *view)
+view_handle_surface_controller_event(const struct cg_surface_controller_event *event, void *data)
 {
-	enum cg_poc_surface_role previous = view->poc_role;
-	enum cg_poc_surface_role next = view_detect_poc_role(view);
+	struct cg_server *server = data;
+	struct cg_view *view;
 
-	view->poc_role = next;
-	if (next != previous) {
-		char *title = view_get_title(view);
-		wlr_log(WLR_INFO, "POC view role changed from %d to %d (title=%s)", previous, next, title ? title : "");
-		free(title);
+	if (!event || !server) {
+		return;
 	}
-
-	if (view->scene_tree) {
-		view_position(view);
+	wl_list_for_each (view, &server->views, link) {
+		if (view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
+			continue;
+		}
+		if (event->type == CG_SURFACE_CONTROLLER_RESET ||
+		    (event->type == CG_SURFACE_CONTROLLER_RETIRED &&
+		     view->surface_policy.identity.scene_id == event->scene_id &&
+		     view->surface_policy.identity.surface_id == event->surface_id)) {
+			view_quarantine(view);
+		}
 	}
 }
 
@@ -122,7 +189,9 @@ void
 view_activate(struct cg_view *view, bool activate)
 {
 	view->impl->activate(view, activate);
-	wlr_foreign_toplevel_handle_v1_set_activated(view->foreign_toplevel_handle, activate);
+	if (view->foreign_toplevel_handle) {
+		wlr_foreign_toplevel_handle_v1_set_activated(view->foreign_toplevel_handle, activate);
+	}
 }
 
 static bool
@@ -197,13 +266,16 @@ view_position_all(struct cg_server *server)
 {
 	struct cg_view *view;
 	wl_list_for_each (view, &server->views, link) {
-		view_position(view);
+		if (cg_surface_view_policy_visible(&view->surface_policy)) {
+			view_position(view);
+		}
 	}
 }
 
 void
 view_unmap(struct cg_view *view)
 {
+	seat_clear_focus(view->server->seat, view);
 	wl_list_remove(&view->link);
 
 	wl_list_remove(&view->request_activate.link);
@@ -222,6 +294,9 @@ handle_surface_request_activate(struct wl_listener *listener, void *data)
 {
 	struct cg_view *view = wl_container_of(listener, view, request_activate);
 
+	if (!view_accepts_input(view)) {
+		return;
+	}
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
 	seat_set_focus(view->server->seat, view);
 }
@@ -243,7 +318,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 
 	view->wlr_surface = surface;
 	surface->data = view;
-	view_update_poc_role(view);
+	bool associated = view_associate_surface(view, surface);
 
 #if CAGE_HAS_XWAYLAND
 	/* We shouldn't position override-redirect windows. They set
@@ -265,7 +340,9 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 	view->request_close.notify = handle_surface_request_close;
 	wl_signal_add(&view->foreign_toplevel_handle->events.request_close, &view->request_close);
 
-	seat_set_focus(view->server->seat, view);
+	if (associated) {
+		seat_set_focus(view->server->seat, view);
+	}
 	return;
 
 fail:
@@ -276,18 +353,26 @@ void
 view_destroy(struct cg_view *view)
 {
 	struct cg_server *server = view->server;
+	struct cg_surface_identity identity = view->surface_policy.identity;
+	bool associated = view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED;
 
 	if (view->wlr_surface != NULL) {
 		view_unmap(view);
 	}
+	if (associated) {
+		(void) cg_surface_registry_retire(&server->surface_registry, identity.scene_id, identity.surface_id);
+		cg_surface_view_policy_quarantine(&view->surface_policy);
+	}
 
 	view->impl->destroy(view);
 
-	/* If there is a previous view in the list, focus that. */
-	bool empty = wl_list_empty(&server->views);
-	if (!empty) {
-		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
-		seat_set_focus(server->seat, prev);
+	/* Focus the first remaining view that is still allowed to receive input. */
+	struct cg_view *candidate;
+	wl_list_for_each (candidate, &server->views, link) {
+		if (view_accepts_input(candidate)) {
+			seat_set_focus(server->seat, candidate);
+			break;
+		}
 	}
 }
 
@@ -297,6 +382,7 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 	view->server = server;
 	view->type = type;
 	view->poc_role = CG_POC_SURFACE_DEFAULT;
+	cg_surface_view_policy_init(&view->surface_policy);
 	view->impl = impl;
 }
 

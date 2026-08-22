@@ -197,3 +197,27 @@ cg_surface_control_encode_reset(uint8_t *bytes_out, size_t capacity, size_t *siz
 	*size_out = CG_SURFACE_CONTROL_RESET_SIZE;
 	return true;
 }
+
+bool
+cg_surface_control_encode_associated(const struct cg_surface_identity *identity, uint8_t *bytes_out,
+				     size_t capacity, size_t *size_out)
+{
+	if (!identity || identity->scene_id == 0 || identity->surface_id == 0 ||
+	    !cg_surface_kind_is_valid(identity->kind) || !bytes_out || capacity < CG_SURFACE_CONTROL_ASSOCIATED_SIZE ||
+	    !size_out ||
+	    (identity->has_parent ? identity->parent_surface_id == 0 ||
+				     identity->parent_surface_id == identity->surface_id
+				   : identity->parent_surface_id != 0) ||
+	    (identity->kind == CG_SURFACE_KIND_POPUP && !identity->has_parent)) {
+		return false;
+	}
+	memset(bytes_out, 0, CG_SURFACE_CONTROL_ASSOCIATED_SIZE);
+	write_header(bytes_out, CG_SURFACE_CONTROL_ASSOCIATED, CG_SURFACE_CONTROL_ASSOCIATED_SIZE);
+	write_u64(bytes_out + 8, identity->scene_id);
+	write_u64(bytes_out + 16, identity->surface_id);
+	bytes_out[24] = (uint8_t) identity->kind;
+	bytes_out[25] = identity->has_parent ? 1 : 0;
+	write_u64(bytes_out + 28, identity->parent_surface_id);
+	*size_out = CG_SURFACE_CONTROL_ASSOCIATED_SIZE;
+	return true;
+}

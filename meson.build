@@ -97,6 +97,7 @@ cage_sources = [
   'surface_controller.c',
   'surface_registry.c',
   'surface_token_hint.c',
+  'surface_view_policy.c',
   'view.c',
   'xdg_shell.c',
   configure_file(input: 'config.h.in',
@@ -124,6 +125,7 @@ poc_layout_test = executable(
   'poc-layout-test',
   [
     'poc_layout.c',
+    'tests/poc_title_fixture.c',
     'tests/poc_layout_test.c',
   ],
   include_directories: include_directories('.'),

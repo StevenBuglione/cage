@@ -12,12 +12,14 @@
 #define CG_SURFACE_CONTROL_REGISTER_SIZE 72
 #define CG_SURFACE_CONTROL_UNREGISTER_SIZE 24
 #define CG_SURFACE_CONTROL_RESET_SIZE 8
+#define CG_SURFACE_CONTROL_ASSOCIATED_SIZE 40
 #define CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE CG_SURFACE_CONTROL_REGISTER_SIZE
 
 enum cg_surface_control_message_type {
 	CG_SURFACE_CONTROL_REGISTER = 1,
 	CG_SURFACE_CONTROL_UNREGISTER = 2,
 	CG_SURFACE_CONTROL_RESET = 3,
+	CG_SURFACE_CONTROL_ASSOCIATED = 0x81,
 };
 
 enum cg_surface_control_parse_result {
@@ -50,5 +52,7 @@ bool cg_surface_control_encode_register(const struct cg_surface_registration_req
 bool cg_surface_control_encode_unregister(const struct cg_surface_control_unregister *request, uint8_t *bytes_out,
 					  size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_reset(uint8_t *bytes_out, size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_associated(const struct cg_surface_identity *identity, uint8_t *bytes_out,
+					  size_t capacity, size_t *size_out);
 
 #endif

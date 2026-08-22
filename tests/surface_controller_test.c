@@ -20,6 +20,27 @@ test_now(void *data)
 	return *(uint64_t *) data;
 }
 
+struct observed_events {
+	uint64_t resets;
+	uint64_t retired;
+	cg_scene_id last_scene_id;
+	cg_surface_id last_surface_id;
+};
+
+static void
+observe_event(const struct cg_surface_controller_event *event, void *data)
+{
+	struct observed_events *observed = data;
+
+	if (event->type == CG_SURFACE_CONTROLLER_RESET) {
+		observed->resets++;
+	} else if (event->type == CG_SURFACE_CONTROLLER_RETIRED) {
+		observed->retired++;
+		observed->last_scene_id = event->scene_id;
+		observed->last_surface_id = event->surface_id;
+	}
+}
+
 static int
 connect_client(const char *path)
 {
@@ -65,7 +86,9 @@ main(void)
 	struct cg_surface_registry registry;
 	struct cg_surface_controller controller;
 	struct cg_surface_registration_request register_request = registration();
+	struct cg_surface_identity associated_identity;
 	struct cg_surface_control_unregister unregister_request = {.scene_id = 7, .surface_id = 100};
+	struct observed_events observed = {0};
 	struct wl_display *display = wl_display_create();
 	struct wl_event_loop *event_loop;
 	struct stat metadata;
@@ -81,8 +104,10 @@ main(void)
 	assert(snprintf(path, sizeof(path), "%s/control.sock", runtime_dir) > 0);
 	cg_surface_registry_init(&registry);
 	cg_surface_controller_init(&controller);
-	assert(cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, test_now, &now));
-	assert(!cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, test_now, &now));
+	assert(cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, test_now, &now,
+					   observe_event, &observed));
+	assert(!cg_surface_controller_start(&controller, event_loop, path, runtime_dir, &registry, test_now, &now,
+					    observe_event, &observed));
 	assert(stat(path, &metadata) == 0);
 	assert((metadata.st_mode & 0777) == 0600);
 
@@ -97,6 +122,12 @@ main(void)
 	assert(controller.applied_messages == 1);
 	assert(controller.rejected_messages == 0);
 	assert(cg_surface_registry_find(&registry, 7, 100)->state == CG_SURFACE_REGISTRATION_PENDING);
+	assert(cg_surface_registry_associate(&registry, &register_request.token, 0x1000, now,
+					     &associated_identity) == CG_SURFACE_REGISTRY_OK);
+	assert(cg_surface_controller_notify_associated(&controller, &associated_identity));
+	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_ASSOCIATED_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x81\x00\x28", 8) == 0);
+	assert(cg_surface_controller_now(&controller) == now);
 
 	send_bytes(client, bytes, size);
 	dispatch(event_loop);
@@ -120,12 +151,16 @@ main(void)
 	dispatch(event_loop);
 	assert(controller.applied_messages == 2);
 	assert(cg_surface_registry_find(&registry, 7, 100)->state == CG_SURFACE_REGISTRATION_RETIRED);
+	assert(observed.retired == 1);
+	assert(observed.last_scene_id == 7);
+	assert(observed.last_surface_id == 100);
 
 	assert(cg_surface_control_encode_reset(bytes, sizeof(bytes), &size));
 	send_bytes(client, bytes, size);
 	dispatch(event_loop);
 	assert(controller.applied_messages == 3);
 	assert(registry.registrations == 0);
+	assert(observed.resets == 1);
 
 	register_request.surface_id = 101;
 	register_request.token.bytes[0] = 2;
@@ -139,6 +174,7 @@ main(void)
 	assert(!controller.client_source);
 	assert(controller.disconnects == 1);
 	assert(registry.registrations == 0);
+	assert(observed.resets == 2);
 
 	client = connect_client(path);
 	dispatch(event_loop);
@@ -146,12 +182,14 @@ main(void)
 	assert(close(client) == 0);
 	dispatch(event_loop);
 	assert(controller.disconnects == 2);
+	assert(observed.resets == 3);
 
 	cg_surface_controller_stop(&controller);
 	assert(!controller.accepting);
 	assert(controller.listener_fd == -1);
 	assert(!controller.listener_source);
 	assert(access(path, F_OK) < 0);
+	assert(observed.resets == 4);
 	cg_surface_controller_stop(&controller);
 	wl_display_destroy(display);
 	assert(rmdir(runtime_dir) == 0);

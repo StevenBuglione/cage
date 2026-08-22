@@ -30,6 +30,7 @@ cg_surface_view_policy_quarantine(struct cg_surface_view_policy *policy)
 	}
 	policy->state = CG_SURFACE_VIEW_QUARANTINED;
 	memset(&policy->identity, 0, sizeof(policy->identity));
+	policy->registry_generation = 0;
 }
 
 bool
@@ -43,6 +44,11 @@ cg_surface_view_policy_associate(struct cg_surface_view_policy *policy, bool reg
 		return false;
 	}
 	if (policy->state == CG_SURFACE_VIEW_ASSOCIATED) {
+		if (registry_required && (!registry || policy->registry_generation != registry->generation)) {
+			policy->association_result = CG_SURFACE_REGISTRY_NOT_FOUND;
+			cg_surface_view_policy_quarantine(policy);
+			return false;
+		}
 		return true;
 	}
 	if (policy->state == CG_SURFACE_VIEW_QUARANTINED) {
@@ -65,6 +71,7 @@ cg_surface_view_policy_associate(struct cg_surface_view_policy *policy, bool reg
 		return false;
 	}
 	policy->state = CG_SURFACE_VIEW_ASSOCIATED;
+	policy->registry_generation = registry->generation;
 	return true;
 }
 

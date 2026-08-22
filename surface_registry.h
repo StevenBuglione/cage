@@ -73,6 +73,7 @@ struct cg_surface_registration {
 
 struct cg_surface_registry {
 	struct cg_surface_registration entries[CG_SURFACE_REGISTRY_CAPACITY];
+	uint64_t generation;
 	size_t registrations;
 	uint64_t associations;
 	uint64_t quarantines;

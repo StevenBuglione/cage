@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "poc_layout.h"
+#include "poc_title_fixture.h"
 
 static void
 assert_rect(struct cg_poc_rect actual, int x, int y, int width, int height)
@@ -73,26 +74,26 @@ test_layout_message_parser(void)
 static void
 test_title_classification(void)
 {
-	assert(cg_poc_layout_classify_title(false, "Linguum Workspace") == CG_POC_SURFACE_DEFAULT);
-	assert(cg_poc_layout_classify_title(true, "Linguum Workspace") == CG_POC_SURFACE_WORKSPACE);
-	assert(cg_poc_layout_classify_title(true, "Linguum Workspace — project") == CG_POC_SURFACE_WORKSPACE);
-	assert(cg_poc_layout_classify_title(true, "Linguum Browser Controls") == CG_POC_SURFACE_CONTROLS);
-	assert(cg_poc_layout_classify_title(true, "Linguum Browser Controls — active") == CG_POC_SURFACE_CONTROLS);
-	assert(cg_poc_layout_classify_title(true, "Firefox") == CG_POC_SURFACE_BROWSER);
-	assert(cg_poc_layout_classify_title(true, NULL) == CG_POC_SURFACE_BROWSER);
+	assert(cg_poc_title_fixture_classify(false, "Linguum Workspace") == CG_POC_SURFACE_DEFAULT);
+	assert(cg_poc_title_fixture_classify(true, "Linguum Workspace") == CG_POC_SURFACE_WORKSPACE);
+	assert(cg_poc_title_fixture_classify(true, "Linguum Workspace — project") == CG_POC_SURFACE_WORKSPACE);
+	assert(cg_poc_title_fixture_classify(true, "Linguum Browser Controls") == CG_POC_SURFACE_CONTROLS);
+	assert(cg_poc_title_fixture_classify(true, "Linguum Browser Controls — active") == CG_POC_SURFACE_CONTROLS);
+	assert(cg_poc_title_fixture_classify(true, "Firefox") == CG_POC_SURFACE_BROWSER);
+	assert(cg_poc_title_fixture_classify(true, NULL) == CG_POC_SURFACE_BROWSER);
 }
 
 static void
 test_title_change_reclassification(void)
 {
-	enum cg_poc_surface_role role = cg_poc_layout_classify_title(true, "Firefox");
+	enum cg_poc_surface_role role = cg_poc_title_fixture_classify(true, "Firefox");
 
 	assert(role == CG_POC_SURFACE_BROWSER);
-	role = cg_poc_layout_classify_title(true, "Linguum Workspace — renamed");
+	role = cg_poc_title_fixture_classify(true, "Linguum Workspace — renamed");
 	assert(role == CG_POC_SURFACE_WORKSPACE);
-	role = cg_poc_layout_classify_title(true, "Linguum Browser Controls — renamed");
+	role = cg_poc_title_fixture_classify(true, "Linguum Browser Controls — renamed");
 	assert(role == CG_POC_SURFACE_CONTROLS);
-	role = cg_poc_layout_classify_title(false, "Linguum Workspace");
+	role = cg_poc_title_fixture_classify(false, "Linguum Workspace");
 	assert(role == CG_POC_SURFACE_DEFAULT);
 }
 

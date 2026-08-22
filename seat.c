@@ -85,7 +85,12 @@ desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surfa
 	}
 
 	assert(node != NULL);
-	return node->data;
+	struct cg_view *view = node->data;
+	if (!view_accepts_input(view)) {
+		*surface = NULL;
+		return NULL;
+	}
+	return view;
 }
 
 static void
@@ -105,7 +110,7 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device, uint3
 
 		/* Focus that client if the button was pressed and
 		   it has no open dialogs. */
-		if (view && !view_is_transient_for(current, view)) {
+		if (view && (!current || !view_is_transient_for(current, view))) {
 			seat_set_focus(seat, view);
 		}
 	}
@@ -967,7 +972,7 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct cg_view *prev_view = seat_get_focus(seat);
 
-	if (!view || prev_view == view) {
+	if (!view || !view_accepts_input(view) || prev_view == view) {
 		return;
 	}
 
@@ -1008,6 +1013,17 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 
 	process_cursor_motion(seat, -1, 0, 0, 0, 0);
+}
+
+void
+seat_clear_focus(struct cg_seat *seat, struct cg_view *view)
+{
+	if (!seat || !view || seat_get_focus(seat) != view) {
+		return;
+	}
+	view_activate(view, false);
+	wlr_seat_keyboard_clear_focus(seat->seat);
+	wlr_seat_pointer_clear_focus(seat->seat);
 }
 
 void

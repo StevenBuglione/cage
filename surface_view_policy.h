@@ -16,6 +16,7 @@ struct cg_surface_view_policy {
 	enum cg_surface_view_state state;
 	enum cg_surface_registry_result association_result;
 	struct cg_surface_identity identity;
+	uint64_t registry_generation;
 };
 
 void cg_surface_view_policy_init(struct cg_surface_view_policy *policy);

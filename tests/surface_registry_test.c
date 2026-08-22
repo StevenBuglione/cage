@@ -160,12 +160,18 @@ test_reset_zeroes_tokens_and_state(void)
 {
 	struct cg_surface_registry registry;
 	struct cg_surface_registration_request request = request_for(100, 1, CG_SURFACE_KIND_APP_VIEW);
-	const uint8_t zero[sizeof(registry)] = {0};
+	const uint8_t zero_entries[sizeof(registry.entries)] = {0};
+	uint64_t generation;
 
 	cg_surface_registry_init(&registry);
+	generation = registry.generation;
 	assert(cg_surface_registry_register(&registry, &request, 0) == CG_SURFACE_REGISTRY_OK);
 	cg_surface_registry_reset(&registry);
-	assert(memcmp(&registry, zero, sizeof(registry)) == 0);
+	assert(memcmp(&registry.entries, zero_entries, sizeof(registry.entries)) == 0);
+	assert(registry.generation == generation + 1);
+	assert(registry.registrations == 0);
+	assert(registry.associations == 0);
+	assert(registry.quarantines == 0);
 }
 
 static void

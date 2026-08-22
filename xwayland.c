@@ -38,6 +38,13 @@ get_title(struct cg_view *view)
 	return xwayland_view->xwayland_surface->title;
 }
 
+static const char *
+get_app_id(struct cg_view *view)
+{
+	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+	return xwayland_view->xwayland_surface->class;
+}
+
 static void
 get_geometry(struct cg_view *view, int *width_out, int *height_out)
 {
@@ -171,6 +178,7 @@ handle_xwayland_surface_destroy(struct wl_listener *listener, void *data)
 
 static const struct cg_view_impl xwayland_view_impl = {
 	.get_title = get_title,
+	.get_app_id = get_app_id,
 	.get_geometry = get_geometry,
 	.is_primary = is_primary,
 	.is_transient_for = is_transient_for,

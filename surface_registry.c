@@ -60,15 +60,20 @@ cg_surface_registry_init(struct cg_surface_registry *registry)
 		return;
 	}
 	memset(registry, 0, sizeof(*registry));
+	registry->generation = 1;
 }
 
 void
 cg_surface_registry_reset(struct cg_surface_registry *registry)
 {
+	uint64_t generation;
+
 	if (!registry) {
 		return;
 	}
+	generation = registry->generation == UINT64_MAX ? 1 : registry->generation + 1;
 	secure_zero(registry, sizeof(*registry));
+	registry->generation = generation;
 }
 
 const struct cg_surface_registration *

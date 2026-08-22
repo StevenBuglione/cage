@@ -12,8 +12,6 @@
 
 #include "poc_layout.h"
 
-#define POC_WORKSPACE_TITLE "Linguum Workspace"
-#define POC_CONTROLS_TITLE "Linguum Browser Controls"
 #define POC_CONTROLS_HEIGHT 40
 #define POC_BROWSER_MIN_WIDTH 360
 #define POC_BROWSER_MAX_WIDTH 1200
@@ -70,24 +68,6 @@ cg_poc_layout_socket_path_valid(const char *path, const char *runtime_dir, size_
 
 	return strncmp(path, runtime_dir, runtime_length) == 0 && path[runtime_length] == '/' &&
 	       path[runtime_length + 1] != '\0';
-}
-
-enum cg_poc_surface_role
-cg_poc_layout_classify_title(bool enabled, const char *title)
-{
-	if (!enabled) {
-		return CG_POC_SURFACE_DEFAULT;
-	}
-
-	if (title && strncmp(title, POC_WORKSPACE_TITLE, strlen(POC_WORKSPACE_TITLE)) == 0) {
-		return CG_POC_SURFACE_WORKSPACE;
-	}
-
-	if (title && strncmp(title, POC_CONTROLS_TITLE, strlen(POC_CONTROLS_TITLE)) == 0) {
-		return CG_POC_SURFACE_CONTROLS;
-	}
-
-	return CG_POC_SURFACE_BROWSER;
 }
 
 bool

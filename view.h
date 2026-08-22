@@ -14,6 +14,7 @@
 
 #include "poc_layout.h"
 #include "server.h"
+#include "surface_view_policy.h"
 
 enum cg_view_type {
 	CAGE_XDG_SHELL_VIEW,
@@ -33,6 +34,7 @@ struct cg_view {
 
 	enum cg_view_type type;
 	enum cg_poc_surface_role poc_role;
+	struct cg_surface_view_policy surface_policy;
 	const struct cg_view_impl *impl;
 
 	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel_handle;
@@ -42,6 +44,7 @@ struct cg_view {
 
 struct cg_view_impl {
 	char *(*get_title)(struct cg_view *view);
+	const char *(*get_app_id)(struct cg_view *view);
 	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
 	bool (*is_primary)(struct cg_view *view);
 	bool (*is_transient_for)(struct cg_view *child, struct cg_view *parent);
@@ -52,12 +55,14 @@ struct cg_view_impl {
 };
 
 char *view_get_title(struct cg_view *view);
+const char *view_get_app_id(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
 bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
 void view_activate(struct cg_view *view, bool activate);
 void view_configure_poc_layout(struct cg_server *server);
 bool view_set_poc_browser_width(struct cg_server *server, int width);
-void view_update_poc_role(struct cg_view *view);
+bool view_accepts_input(const struct cg_view *view);
+void view_handle_surface_controller_event(const struct cg_surface_controller_event *event, void *data);
 void view_position(struct cg_view *view);
 void view_position_all(struct cg_server *server);
 void view_unmap(struct cg_view *view);

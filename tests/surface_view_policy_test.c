@@ -47,6 +47,7 @@ test_association_is_immutable(void)
 	assert(policy.identity.scene_id == 7);
 	assert(policy.identity.surface_id == 100);
 	assert(policy.identity.kind == CG_SURFACE_KIND_FIREFOX_VIEW);
+	assert(policy.registry_generation == registry.generation);
 	assert(cg_surface_view_policy_visible(&policy));
 	assert(cg_surface_view_policy_accepts_input(&policy));
 
@@ -54,6 +55,25 @@ test_association_is_immutable(void)
 	assert(policy.identity.surface_id == 100);
 	assert(registry.associations == 1);
 	assert(registry.quarantines == 0);
+}
+
+static void
+test_registry_reset_invalidates_association(void)
+{
+	struct cg_surface_registry registry;
+	struct cg_surface_view_policy policy;
+	struct cg_surface_registration_request request = registration(3);
+	char hint[CG_SURFACE_TOKEN_HINT_SIZE];
+
+	cg_surface_registry_init(&registry);
+	cg_surface_view_policy_init(&policy);
+	assert(cg_surface_registry_register(&registry, &request, 0) == CG_SURFACE_REGISTRY_OK);
+	assert(cg_surface_token_hint_encode(&request.token, hint, sizeof(hint)));
+	assert(cg_surface_view_policy_associate(&policy, true, &registry, hint, 0x5000, 1));
+	cg_surface_registry_reset(&registry);
+	assert(!cg_surface_view_policy_associate(&policy, true, &registry, "ignored", 0x5000, 2));
+	assert(policy.state == CG_SURFACE_VIEW_QUARANTINED);
+	assert(!cg_surface_view_policy_visible(&policy));
 }
 
 static void
@@ -115,6 +135,7 @@ main(void)
 	test_unmanaged_mode();
 	test_association_is_immutable();
 	test_unknown_invalid_stale_and_replayed_quarantine();
+	test_registry_reset_invalidates_association();
 	test_forced_quarantine_erases_identity();
 	return 0;
 }

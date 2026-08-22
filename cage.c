@@ -125,7 +125,8 @@ setup_surface_controller(struct cg_server *server, struct wl_event_loop *event_l
 	}
 
 	if (!cg_surface_controller_start(&server->surface_controller, event_loop, path, runtime_dir,
-					 &server->surface_registry, NULL, NULL)) {
+					 &server->surface_registry, NULL, NULL,
+					 view_handle_surface_controller_event, server)) {
 		wlr_log_errno(WLR_ERROR, "Unable to create framework surface controller");
 		return false;
 	}

@@ -59,6 +59,21 @@ monotonic_now(void *data)
 }
 
 static void
+emit_event(struct cg_surface_controller *controller, enum cg_surface_controller_event_type type,
+	   cg_scene_id scene_id, cg_surface_id surface_id)
+{
+	const struct cg_surface_controller_event event = {
+		.type = type,
+		.scene_id = scene_id,
+		.surface_id = surface_id,
+	};
+
+	if (controller->event) {
+		controller->event(&event, controller->event_data);
+	}
+}
+
+static void
 disconnect_client(struct cg_surface_controller *controller)
 {
 	if (controller->client_source) {
@@ -72,6 +87,7 @@ disconnect_client(struct cg_surface_controller *controller)
 	if (controller->registry) {
 		cg_surface_registry_reset(controller->registry);
 	}
+	emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0);
 	controller->disconnects++;
 }
 
@@ -87,10 +103,15 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 	case CG_SURFACE_CONTROL_UNREGISTER:
 		controller->last_registry_result = cg_surface_registry_retire(
 			controller->registry, message->unregistration.scene_id, message->unregistration.surface_id);
+		if (controller->last_registry_result == CG_SURFACE_REGISTRY_OK) {
+			emit_event(controller, CG_SURFACE_CONTROLLER_RETIRED, message->unregistration.scene_id,
+				   message->unregistration.surface_id);
+		}
 		break;
 	case CG_SURFACE_CONTROL_RESET:
 		cg_surface_registry_reset(controller->registry);
 		controller->last_registry_result = CG_SURFACE_REGISTRY_OK;
+		emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0);
 		break;
 	}
 	if (controller->last_registry_result == CG_SURFACE_REGISTRY_OK) {
@@ -209,7 +230,8 @@ cg_surface_controller_init(struct cg_surface_controller *controller)
 bool
 cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_event_loop *event_loop,
 			    const char *path, const char *runtime_dir, struct cg_surface_registry *registry,
-			    cg_surface_controller_now_func now, void *now_data)
+			    cg_surface_controller_now_func now, void *now_data,
+			    cg_surface_controller_event_func event, void *event_data)
 {
 	struct sockaddr_un address = {.sun_family = AF_UNIX};
 
@@ -235,6 +257,8 @@ cg_surface_controller_start(struct cg_surface_controller *controller, struct wl_
 	controller->registry = registry;
 	controller->now = now ? now : monotonic_now;
 	controller->now_data = now_data;
+	controller->event = event;
+	controller->event_data = event_data;
 	controller->accepting = true;
 	controller->listener_source = wl_event_loop_add_fd(event_loop, controller->listener_fd, WL_EVENT_READABLE,
 							   handle_listener, controller);
@@ -251,6 +275,33 @@ fail: {
 }
 }
 
+uint64_t
+cg_surface_controller_now(const struct cg_surface_controller *controller)
+{
+	return controller && controller->now ? controller->now(controller->now_data) : 0;
+}
+
+bool
+cg_surface_controller_notify_associated(struct cg_surface_controller *controller,
+					const struct cg_surface_identity *identity)
+{
+	uint8_t bytes[CG_SURFACE_CONTROL_ASSOCIATED_SIZE];
+	size_t size;
+	ssize_t sent;
+
+	if (!controller || !controller->accepting || controller->client_fd < 0 ||
+	    !cg_surface_control_encode_associated(identity, bytes, sizeof(bytes), &size)) {
+		return false;
+	}
+	sent = send(controller->client_fd, bytes, size, MSG_NOSIGNAL);
+	if (sent == (ssize_t) size) {
+		return true;
+	}
+	controller->receive_errors++;
+	disconnect_client(controller);
+	return false;
+}
+
 void
 cg_surface_controller_stop(struct cg_surface_controller *controller)
 {
@@ -262,6 +313,7 @@ cg_surface_controller_stop(struct cg_surface_controller *controller)
 		disconnect_client(controller);
 	} else if (controller->registry) {
 		cg_surface_registry_reset(controller->registry);
+		emit_event(controller, CG_SURFACE_CONTROLLER_RESET, 0, 0);
 	}
 	if (controller->listener_source) {
 		wl_event_source_remove(controller->listener_source);
@@ -279,4 +331,6 @@ cg_surface_controller_stop(struct cg_surface_controller *controller)
 	controller->event_loop = NULL;
 	controller->now = NULL;
 	controller->now_data = NULL;
+	controller->event = NULL;
+	controller->event_data = NULL;
 }

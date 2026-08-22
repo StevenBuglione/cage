@@ -72,6 +72,30 @@ test_unregister_and_reset(void)
 }
 
 static void
+test_associated_golden_vector(void)
+{
+	const struct cg_surface_identity identity = {
+		.scene_id = 0x0102030405060708ULL,
+		.surface_id = 0x1112131415161718ULL,
+		.kind = CG_SURFACE_KIND_POPUP,
+		.has_parent = true,
+		.parent_surface_id = 0x2122232425262728ULL,
+	};
+	uint8_t bytes[CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE];
+	size_t size;
+
+	assert(cg_surface_control_encode_associated(&identity, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_ASSOCIATED_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x81\x00\x28", 8) == 0);
+	assert(memcmp(bytes + 8, "\x01\x02\x03\x04\x05\x06\x07\x08", 8) == 0);
+	assert(memcmp(bytes + 16, "\x11\x12\x13\x14\x15\x16\x17\x18", 8) == 0);
+	assert(bytes[24] == CG_SURFACE_KIND_POPUP);
+	assert(bytes[25] == 1);
+	assert(bytes[26] == 0 && bytes[27] == 0);
+	assert(memcmp(bytes + 28, "!\x22#$%&'(\x00\x00\x00\x00", 12) == 0);
+}
+
+static void
 test_size_and_header_rejection(void)
 {
 	struct cg_surface_registration_request request = registration();
@@ -148,6 +172,7 @@ test_encoder_rejection(void)
 	assert(!cg_surface_control_encode_register(&request, bytes, sizeof(bytes), &size));
 	assert(!cg_surface_control_encode_unregister(&unregister_request, bytes, sizeof(bytes), &size));
 	assert(!cg_surface_control_encode_reset(bytes, CG_SURFACE_CONTROL_RESET_SIZE - 1, &size));
+	assert(!cg_surface_control_encode_associated(NULL, bytes, sizeof(bytes), &size));
 }
 
 int
@@ -155,6 +180,7 @@ main(void)
 {
 	test_register_golden_vector();
 	test_unregister_and_reset();
+	test_associated_golden_vector();
 	test_size_and_header_rejection();
 	test_register_field_rejection();
 	test_encoder_rejection();
