@@ -234,8 +234,8 @@ cg_surface_control_parse(const uint8_t *bytes, size_t size, struct cg_surface_co
 		for (uint16_t index = 0; index < snapshot->surface_count; index++) {
 			struct cg_scene_surface_state *state = &snapshot->surfaces[index];
 			uint8_t flags = bytes[offset + 24];
-			if ((flags & ~0x1fu) != 0 || !bytes_are_zero(bytes + offset + 25, 3) ||
-			    !bytes_are_zero(bytes + offset + 56, 8)) {
+			if ((flags & ~0x1fu) != 0 || (bytes[offset + 25] & ~CG_SCENE_OUTPUT_ANCHOR_MASK) != 0 ||
+			    !bytes_are_zero(bytes + offset + 26, 2) || !bytes_are_zero(bytes + offset + 56, 8)) {
 				memset(message_out, 0, sizeof(*message_out));
 				return CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED;
 			}
@@ -251,6 +251,7 @@ cg_surface_control_parse(const uint8_t *bytes, size_t size, struct cg_surface_co
 			state->accepts_input = (flags & 4u) != 0;
 			state->has_parent = (flags & 8u) != 0;
 			state->modal = (flags & 16u) != 0;
+			state->output_anchor_mask = bytes[offset + 25];
 			state->z_index = read_i32(bytes + offset + 28);
 			state->clip = (struct cg_scene_rect) {
 				.x = read_i32(bytes + offset + 32),
@@ -359,6 +360,9 @@ cg_surface_control_encode_apply_scene(const struct cg_scene_snapshot *snapshot, 
 	write_u64(bytes_out + 40, snapshot->focused_surface_id);
 	for (uint16_t index = 0; index < snapshot->surface_count; index++) {
 		const struct cg_scene_surface_state *state = &snapshot->surfaces[index];
+		if ((state->output_anchor_mask & ~CG_SCENE_OUTPUT_ANCHOR_MASK) != 0) {
+			return false;
+		}
 		uint8_t flags = (state->has_clip ? 1u : 0u) | (state->visible ? 2u : 0u) |
 				(state->accepts_input ? 4u : 0u) | (state->has_parent ? 8u : 0u) |
 				(state->modal ? 16u : 0u);
@@ -368,6 +372,7 @@ cg_surface_control_encode_apply_scene(const struct cg_scene_snapshot *snapshot, 
 		write_i32(bytes_out + offset + 16, state->bounds.width);
 		write_i32(bytes_out + offset + 20, state->bounds.height);
 		bytes_out[offset + 24] = flags;
+		bytes_out[offset + 25] = state->output_anchor_mask;
 		write_i32(bytes_out + offset + 28, state->z_index);
 		write_i32(bytes_out + offset + 32, state->clip.x);
 		write_i32(bytes_out + offset + 36, state->clip.y);

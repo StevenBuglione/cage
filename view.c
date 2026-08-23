@@ -28,6 +28,21 @@
 
 static void view_apply_scene_order_and_focus(struct cg_server *server, cg_scene_id scene_id);
 
+static void
+view_schedule_scene_frame(struct cg_server *server)
+{
+	struct cg_output *output;
+
+	if (!server) {
+		return;
+	}
+	wl_list_for_each (output, &server->outputs, link) {
+		if (output->wlr_output->enabled) {
+			wlr_output_schedule_frame(output->wlr_output);
+		}
+	}
+}
+
 char *
 view_get_title(struct cg_view *view)
 {
@@ -90,7 +105,8 @@ view_associate_surface(struct cg_view *view, struct wlr_surface *surface)
 					      app_id_hint, (uintptr_t) surface,
 					      cg_surface_controller_now(controller))) {
 		wlr_log(view->surface_policy.state == CG_SURFACE_VIEW_PENDING ? WLR_DEBUG : WLR_ERROR,
-			"Framework surface association unavailable (pending=%s, hint_present=%s, hint_length=%zu, result=%d)",
+			"Framework surface association unavailable (pending=%s, hint_present=%s, hint_length=%zu, "
+			"result=%d)",
 			view->surface_policy.state == CG_SURFACE_VIEW_PENDING ? "true" : "false",
 			app_id_hint ? "true" : "false", app_id_hint ? strlen(app_id_hint) : 0,
 			(int) view->surface_policy.association_result);
@@ -122,8 +138,8 @@ view_associate_pending_surface(struct cg_view *view)
 	controller = &view->server->surface_controller;
 	app_id_hint = view_get_app_id(view);
 	if (!cg_surface_view_policy_associate_pending(&view->surface_policy, &view->server->surface_registry,
-					      app_id_hint, (uintptr_t) view->wlr_surface,
-					      cg_surface_controller_now(controller))) {
+						      app_id_hint, (uintptr_t) view->wlr_surface,
+						      cg_surface_controller_now(controller))) {
 		if (view->surface_policy.state == CG_SURFACE_VIEW_QUARANTINED) {
 			view_quarantine(view);
 		}
@@ -131,7 +147,8 @@ view_associate_pending_surface(struct cg_view *view)
 	}
 	if (!cg_surface_controller_notify_associated(controller, &view->surface_policy.identity)) {
 		struct cg_surface_identity identity = view->surface_policy.identity;
-		(void) cg_surface_registry_retire(&view->server->surface_registry, identity.scene_id, identity.surface_id);
+		(void) cg_surface_registry_retire(&view->server->surface_registry, identity.scene_id,
+						  identity.surface_id);
 		cg_surface_view_policy_quarantine(&view->surface_policy);
 		view_quarantine(view);
 		return false;
@@ -217,8 +234,8 @@ view_hide_scene_state(struct cg_view *view)
 void
 view_apply_scene_state(struct cg_view *view)
 {
-	const struct cg_scene_record *record;
-	const struct cg_scene_surface_state *state;
+	struct cg_scene_surface_state layout_state;
+	const struct cg_scene_surface_state *state = &layout_state;
 	struct cg_scene_rect resolved;
 	struct wlr_box bounds;
 	struct wlr_box clip;
@@ -226,10 +243,8 @@ view_apply_scene_state(struct cg_view *view)
 	if (!view || view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
 		return;
 	}
-	record = cg_scene_model_find(&view->server->scene_model, view->surface_policy.identity.scene_id);
-	state = record ? cg_scene_snapshot_find_surface(&record->snapshot, view->surface_policy.identity.surface_id)
-		       : NULL;
-	if (!state ||
+	if (!cg_scene_model_layout_surface(&view->server->scene_model, view->surface_policy.identity.scene_id,
+					   view->surface_policy.identity.surface_id, &layout_state) ||
 	    !cg_scene_model_resolve_surface(&view->server->scene_model, view->surface_policy.identity.scene_id,
 					    view->surface_policy.identity.surface_id, &resolved)) {
 		view_hide_scene_state(view);
@@ -254,6 +269,10 @@ view_apply_scene_state(struct cg_view *view)
 	view_maximize(view, &bounds);
 	wlr_scene_subsurface_tree_set_clip(&view->scene_tree->node, &clip);
 	wlr_scene_node_set_enabled(&view->scene_tree->node, true);
+	/* A newly associated surface can arrive after the output's last frame
+	 * event. Explicitly request the next event so the scene is committed before
+	 * the host's first resize; wlroots coalesces repeated requests naturally. */
+	view_schedule_scene_frame(view->server);
 	if (!view->scene_accepts_input && view->server->seat) {
 		seat_clear_focus(view->server->seat, view);
 	}

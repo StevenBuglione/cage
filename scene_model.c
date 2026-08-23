@@ -36,7 +36,8 @@ surface_equal(const struct cg_scene_surface_state *left, const struct cg_scene_s
 	       left->has_clip == right->has_clip && (!left->has_clip || rect_equal(left->clip, right->clip)) &&
 	       left->z_index == right->z_index && left->visible == right->visible &&
 	       left->accepts_input == right->accepts_input && left->has_parent == right->has_parent &&
-	       left->parent_surface_id == right->parent_surface_id && left->modal == right->modal;
+	       left->parent_surface_id == right->parent_surface_id && left->modal == right->modal &&
+	       left->output_anchor_mask == right->output_anchor_mask;
 }
 
 static bool
@@ -148,6 +149,8 @@ cg_scene_model_create(struct cg_scene_model *model, cg_scene_id scene_id, cg_out
 	available->occupied = true;
 	available->output_width = output_width;
 	available->output_height = output_height;
+	available->snapshot_output_width = output_width;
+	available->snapshot_output_height = output_height;
 	available->snapshot.scene_id = scene_id;
 	available->snapshot.output_id = output_id;
 	model->scene_count++;
@@ -219,6 +222,7 @@ validate_snapshot(const struct cg_scene_record *record, const struct cg_surface_
 			cg_surface_registry_find(registry, snapshot->scene_id, state->surface_id);
 
 		if (state->surface_id == 0 || !rect_valid(state->bounds) ||
+		    (state->output_anchor_mask & ~CG_SCENE_OUTPUT_ANCHOR_MASK) != 0 ||
 		    (state->has_clip && !rect_valid(state->clip)) ||
 		    (!state->has_clip &&
 		     (state->clip.x != 0 || state->clip.y != 0 || state->clip.width != 0 || state->clip.height != 0)) ||
@@ -309,6 +313,8 @@ cg_scene_model_apply(struct cg_scene_model *model, const struct cg_surface_regis
 		return result;
 	}
 	record->snapshot = *snapshot;
+	record->snapshot_output_width = record->output_width;
+	record->snapshot_output_height = record->output_height;
 	model->applied_snapshots++;
 	return CG_SCENE_OK;
 }
@@ -352,30 +358,99 @@ intersect_rect(struct cg_scene_rect left, struct cg_scene_rect right, struct cg_
 	return true;
 }
 
+static bool
+anchor_rect(struct cg_scene_rect source, uint8_t anchors, uint32_t old_width, uint32_t old_height, uint32_t new_width,
+	    uint32_t new_height, struct cg_scene_rect *result)
+{
+	int64_t x = source.x;
+	int64_t y = source.y;
+	int64_t width = source.width;
+	int64_t height = source.height;
+	int64_t width_delta = (int64_t) new_width - old_width;
+	int64_t height_delta = (int64_t) new_height - old_height;
+	bool left = (anchors & CG_SCENE_OUTPUT_ANCHOR_LEFT) != 0;
+	bool top = (anchors & CG_SCENE_OUTPUT_ANCHOR_TOP) != 0;
+	bool right = (anchors & CG_SCENE_OUTPUT_ANCHOR_RIGHT) != 0;
+	bool bottom = (anchors & CG_SCENE_OUTPUT_ANCHOR_BOTTOM) != 0;
+
+	if (left && right) {
+		width += width_delta;
+	} else if (!left && right) {
+		x += width_delta;
+	}
+	if (top && bottom) {
+		height += height_delta;
+	} else if (!top && bottom) {
+		y += height_delta;
+	}
+	if (!result || x < INT32_MIN || x > INT32_MAX || y < INT32_MIN || y > INT32_MAX || width <= 0 ||
+	    width > INT32_MAX || height <= 0 || height > INT32_MAX) {
+		return false;
+	}
+	*result = (struct cg_scene_rect) {
+		.x = (int32_t) x,
+		.y = (int32_t) y,
+		.width = (int32_t) width,
+		.height = (int32_t) height,
+	};
+	return true;
+}
+
+bool
+cg_scene_model_layout_surface(const struct cg_scene_model *model, cg_scene_id scene_id, cg_surface_id surface_id,
+			      struct cg_scene_surface_state *state_out)
+{
+	const struct cg_scene_record *record = cg_scene_model_find(model, scene_id);
+	const struct cg_scene_surface_state *state;
+
+	if (!record || !state_out || record->snapshot_output_width == 0 || record->snapshot_output_height == 0) {
+		return false;
+	}
+	state = cg_scene_snapshot_find_surface(&record->snapshot, surface_id);
+	if (!state) {
+		return false;
+	}
+	*state_out = *state;
+	if (state->output_anchor_mask == 0 || (record->snapshot_output_width == record->output_width &&
+					       record->snapshot_output_height == record->output_height)) {
+		return true;
+	}
+	if (!anchor_rect(state->bounds, state->output_anchor_mask, record->snapshot_output_width,
+			 record->snapshot_output_height, record->output_width, record->output_height,
+			 &state_out->bounds)) {
+		return false;
+	}
+	if (state->has_clip && !anchor_rect(state->clip, state->output_anchor_mask, record->snapshot_output_width,
+					    record->snapshot_output_height, record->output_width, record->output_height,
+					    &state_out->clip)) {
+		return false;
+	}
+	return true;
+}
+
 bool
 cg_scene_model_resolve_surface(const struct cg_scene_model *model, cg_scene_id scene_id, cg_surface_id surface_id,
 			       struct cg_scene_rect *resolved_out)
 {
 	const struct cg_scene_record *record = cg_scene_model_find(model, scene_id);
-	const struct cg_scene_surface_state *state;
+	struct cg_scene_surface_state state;
 	struct cg_scene_rect output;
 	struct cg_scene_rect resolved;
 
 	if (!record || !resolved_out) {
 		return false;
 	}
-	state = cg_scene_snapshot_find_surface(&record->snapshot, surface_id);
-	if (!state || !state->visible) {
+	if (!cg_scene_model_layout_surface(model, scene_id, surface_id, &state) || !state.visible) {
 		return false;
 	}
 	output = (struct cg_scene_rect) {
 		.width = (int32_t) record->output_width,
 		.height = (int32_t) record->output_height,
 	};
-	if (!intersect_rect(state->bounds, output, &resolved)) {
+	if (!intersect_rect(state.bounds, output, &resolved)) {
 		return false;
 	}
-	if (state->has_clip && !intersect_rect(resolved, state->clip, &resolved)) {
+	if (state.has_clip && !intersect_rect(resolved, state.clip, &resolved)) {
 		return false;
 	}
 	*resolved_out = resolved;

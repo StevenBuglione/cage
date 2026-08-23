@@ -142,6 +142,7 @@ scene_snapshot(void)
 		.has_parent = true,
 		.parent_surface_id = 100,
 		.modal = true,
+		.output_anchor_mask = CG_SCENE_OUTPUT_ANCHOR_MASK,
 	};
 	snapshot.resize_boundaries[0] = (struct cg_scene_resize_boundary) {
 		.boundary_id = 55,
@@ -216,6 +217,7 @@ test_scene_control_round_trip(void)
 	assert(parsed.scene_snapshot.surfaces[1].has_clip);
 	assert(parsed.scene_snapshot.surfaces[1].clip.width == 500);
 	assert(parsed.scene_snapshot.surfaces[1].modal);
+	assert(parsed.scene_snapshot.surfaces[1].output_anchor_mask == CG_SCENE_OUTPUT_ANCHOR_MASK);
 	assert(parsed.scene_snapshot.resize_boundaries[0].boundary_id == 55);
 	assert(parsed.scene_snapshot.resize_boundaries[0].maximum_size == 1200);
 	assert(parsed.scene_snapshot.resize_boundaries[0].visible);
@@ -236,7 +238,10 @@ test_scene_message_rejection_and_capacity(void)
 	bytes[37] = 1;
 	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED);
 	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
-	bytes[CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + 25] = 1;
+	bytes[CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + 26] = 1;
+	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED);
+	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
+	bytes[CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + 25] = 0x10;
 	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_INVALID_RESERVED);
 	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
 	bytes[size - 1] = 1;

@@ -273,6 +273,36 @@ test_output_resize_and_reconnect_snapshot(void)
 	assert(cg_scene_model_find(&model, 7)->snapshot.revision == 1);
 }
 
+static void
+test_output_anchors_project_without_mutating_revision(void)
+{
+	struct cg_scene_model model;
+	struct cg_surface_registry registry;
+	struct cg_scene_snapshot snapshot = base_snapshot();
+	struct cg_scene_surface_state layout;
+	const struct cg_scene_record *record;
+
+	setup(&model, &registry);
+	snapshot.surfaces[0].output_anchor_mask = CG_SCENE_OUTPUT_ANCHOR_MASK;
+	snapshot.surfaces[1].output_anchor_mask = CG_SCENE_OUTPUT_ANCHOR_MASK;
+	assert(cg_scene_model_apply(&model, &registry, &snapshot) == CG_SCENE_OK);
+	assert(cg_scene_model_resize_output(&model, 7, 1200, 800) == CG_SCENE_OK);
+	assert(cg_scene_model_layout_surface(&model, 7, 100, &layout));
+	assert(layout.bounds.x == 0 && layout.bounds.y == 0);
+	assert(layout.bounds.width == 1200 && layout.bounds.height == 800);
+	assert(cg_scene_model_layout_surface(&model, 7, 200, &layout));
+	assert(layout.bounds.x == 600 && layout.bounds.y == 40);
+	assert(layout.bounds.width == 600 && layout.bounds.height == 760);
+	record = cg_scene_model_find(&model, 7);
+	assert(record && record->snapshot.revision == 1);
+	assert(record->snapshot.surfaces[0].bounds.width == 1000);
+	assert(record->snapshot.surfaces[1].bounds.width == 400);
+
+	snapshot.revision = 2;
+	snapshot.surfaces[0].output_anchor_mask = 0x10;
+	assert(cg_scene_model_apply(&model, &registry, &snapshot) == CG_SCENE_INVALID);
+}
+
 int
 main(void)
 {
@@ -282,5 +312,6 @@ main(void)
 	test_parent_and_boundary_validation();
 	test_clip_z_order_visibility_and_association();
 	test_output_resize_and_reconnect_snapshot();
+	test_output_anchors_project_without_mutating_revision();
 	return 0;
 }

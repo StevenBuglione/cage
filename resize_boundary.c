@@ -103,12 +103,15 @@ cg_resize_boundary_hit_test(const struct cg_scene_model *model, const struct cg_
 			const struct cg_scene_resize_boundary *boundary = &record->snapshot.resize_boundaries[index];
 			const struct cg_scene_surface_state *target =
 				cg_scene_snapshot_find_surface(&record->snapshot, boundary->target_surface_id);
+			struct cg_scene_surface_state layout_target;
 			struct cg_scene_rect resolved;
 			if (!boundary->enabled || !boundary->visible || !target || !target->visible ||
 			    !surface_is_associated(registry, record->snapshot.scene_id, target->surface_id) ||
+			    !cg_scene_model_layout_surface(model, record->snapshot.scene_id, target->surface_id,
+							   &layout_target) ||
 			    !cg_scene_model_resolve_surface(model, record->snapshot.scene_id, target->surface_id,
 							    &resolved) ||
-			    !point_hits_boundary(boundary, target, resolved, x, y)) {
+			    !point_hits_boundary(boundary, &layout_target, resolved, x, y)) {
 				continue;
 			}
 			if (!best_target || target->z_index > best_target->z_index ||
