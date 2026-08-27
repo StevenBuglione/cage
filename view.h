@@ -13,6 +13,7 @@
 #endif
 
 #include "server.h"
+#include "surface_frame_gate.h"
 #include "surface_view_policy.h"
 
 enum cg_view_type {
@@ -37,7 +38,7 @@ struct cg_view {
 	bool scene_visible;
 	bool scene_accepts_input;
 	int32_t scene_z_index;
-	cg_scene_revision scene_first_frame_revision;
+	struct cg_surface_frame_gate scene_frame_gate;
 	const struct cg_view_impl *impl;
 
 	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel_handle;

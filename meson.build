@@ -94,6 +94,7 @@ cage_sources = [
   'scene_model.c',
   'seat.c',
   'server_lifecycle.c',
+  'surface_frame_gate.c',
   'surface_control_protocol.c',
   'surface_controller.c',
   'surface_registry.c',
@@ -222,6 +223,17 @@ surface_view_policy_test = executable(
 )
 
 test('surface-view-policy', surface_view_policy_test)
+
+surface_frame_gate_test = executable(
+  'surface-frame-gate-test',
+  [
+    'surface_frame_gate.c',
+    'tests/surface_frame_gate_test.c',
+  ],
+  include_directories: include_directories('.'),
+)
+
+test('surface-frame-gate', surface_frame_gate_test)
 
 scene_model_test = executable(
   'scene-model-test',

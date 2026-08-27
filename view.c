@@ -9,9 +9,11 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output.h>
@@ -69,7 +71,7 @@ view_accepts_input(const struct cg_view *view)
 		return true;
 	}
 	return view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED && view->scene_present && view->scene_visible &&
-	       view->scene_accepts_input && view->scene_first_frame_revision != 0;
+	       view->scene_accepts_input && view->scene_frame_gate.ready_revision != 0;
 }
 
 static void
@@ -85,6 +87,7 @@ view_quarantine(struct cg_view *view)
 	view->scene_present = false;
 	view->scene_visible = false;
 	view->scene_accepts_input = false;
+	cg_surface_frame_gate_reset(&view->scene_frame_gate);
 	if (view->scene_tree) {
 		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 	}
@@ -222,7 +225,7 @@ view_hide_scene_state(struct cg_view *view)
 	view->scene_visible = false;
 	view->scene_accepts_input = false;
 	view->scene_z_index = 0;
-	view->scene_first_frame_revision = 0;
+	cg_surface_frame_gate_reset(&view->scene_frame_gate);
 	if (view->scene_tree) {
 		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 		wlr_scene_subsurface_tree_set_clip(&view->scene_tree->node, NULL);
@@ -237,24 +240,40 @@ view_update_first_frame(struct cg_view *view)
 {
 	struct cg_scene_surface_state state;
 	const struct cg_scene_record *record;
-	bool ready;
+	struct cg_surface_frame_decision decision;
 
 	if (!view || !view->scene_tree || !view->wlr_surface || !view->scene_present ||
 	    view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
 		return;
 	}
 	record = cg_scene_model_find(&view->server->scene_model, view->surface_policy.identity.scene_id);
-	ready = record &&
-		cg_scene_model_layout_surface(&view->server->scene_model, view->surface_policy.identity.scene_id,
-					      view->surface_policy.identity.surface_id, &state) &&
-		view->wlr_surface->current.width == state.bounds.width &&
-		view->wlr_surface->current.height == state.bounds.height;
-	if (!ready) {
-		view->scene_first_frame_revision = 0;
+	if (!record ||
+	    !cg_scene_model_layout_surface(&view->server->scene_model, view->surface_policy.identity.scene_id,
+					   view->surface_policy.identity.surface_id, &state)) {
+		cg_surface_frame_gate_reset(&view->scene_frame_gate);
 		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 		return;
 	}
-	if (view->scene_first_frame_revision != record->snapshot.revision) {
+	decision = cg_surface_frame_gate_update(&view->scene_frame_gate, record->snapshot.revision,
+						view->wlr_surface->current.width, view->wlr_surface->current.height,
+						state.bounds.width, state.bounds.height);
+	if (!decision.ready) {
+		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
+		if (decision.send_wakeup) {
+			struct timespec now;
+			wlr_log(WLR_DEBUG,
+				"Framework surface awaiting exact buffer (revision=%" PRIu64
+				", actual=%dx%d, expected=%dx%d)",
+				record->snapshot.revision, view->wlr_surface->current.width,
+				view->wlr_surface->current.height, state.bounds.width, state.bounds.height);
+			if (clock_gettime(CLOCK_MONOTONIC, &now) == 0) {
+				wlr_surface_send_frame_done(view->wlr_surface, &now);
+			}
+			view_schedule_scene_frame(view->server);
+		}
+		return;
+	}
+	if (decision.notify_ready) {
 		const struct cg_surface_control_first_frame event = {
 			.scene_id = view->surface_policy.identity.scene_id,
 			.surface_id = view->surface_policy.identity.surface_id,
@@ -263,10 +282,10 @@ view_update_first_frame(struct cg_view *view)
 			.height = (uint32_t) state.bounds.height,
 		};
 		if (!cg_surface_controller_notify_first_frame(&view->server->surface_controller, &event)) {
+			cg_surface_frame_gate_reset(&view->scene_frame_gate);
 			wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 			return;
 		}
-		view->scene_first_frame_revision = record->snapshot.revision;
 	}
 	wlr_scene_node_set_enabled(&view->scene_tree->node, view->scene_visible);
 }
@@ -544,7 +563,7 @@ view_unmap(struct cg_view *view)
 
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
-	view->scene_first_frame_revision = 0;
+	cg_surface_frame_gate_reset(&view->scene_frame_gate);
 }
 
 void
@@ -648,6 +667,7 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 	view->server = server;
 	view->type = type;
 	cg_surface_view_policy_init(&view->surface_policy);
+	cg_surface_frame_gate_reset(&view->scene_frame_gate);
 	view->impl = impl;
 }
 
