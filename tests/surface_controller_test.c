@@ -275,7 +275,7 @@ main(void)
 	assert(observed.scene_applied == 1 && observed.last_revision == 1);
 	assert(cg_scene_model_find(&scenes, 7)->snapshot.revision == 1);
 
-	const struct cg_surface_control_resize_output resize_output = {
+	struct cg_surface_control_resize_output resize_output = {
 		.scene_id = 7,
 		.output_id = 11,
 		.output_width = 1200,
@@ -286,6 +286,17 @@ main(void)
 	dispatch(event_loop);
 	assert(observed.output_resized == 1);
 	assert(cg_scene_model_find(&scenes, 7)->output_width == 1200);
+	uint64_t applied_before_burst = controller.applied_messages;
+	uint64_t resized_before_burst = observed.output_resized;
+	for (uint32_t index = 0; index < 64; index++) {
+		resize_output.output_width = 1200 + index;
+		assert(cg_surface_control_encode_resize_output(&resize_output, bytes, sizeof(bytes), &size));
+		send_bytes(client, bytes, size);
+	}
+	dispatch(event_loop);
+	assert(controller.applied_messages == applied_before_burst + 64);
+	assert(observed.output_resized == resized_before_burst + 64);
+	assert(cg_scene_model_find(&scenes, 7)->output_width == 1263);
 	const struct cg_resize_event resize_event = {
 		.type = CG_RESIZE_EVENT_BOUNDS_COMMITTED,
 		.scene_id = 7,
@@ -334,7 +345,7 @@ main(void)
 	assert(observed.scene_destroyed == 1);
 	assert(!cg_scene_model_find(&scenes, 7));
 	assert(cg_surface_registry_find(&registry, 7, 102)->state == CG_SURFACE_REGISTRATION_RETIRED);
-	assert(controller.applied_messages == 9);
+	assert(controller.applied_messages == 73);
 	assert(close(client) == 0);
 	dispatch(event_loop);
 	assert(controller.disconnects == 2);

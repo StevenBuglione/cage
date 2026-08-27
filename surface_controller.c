@@ -20,6 +20,8 @@
 
 #include "surface_controller.h"
 
+#define CG_SURFACE_CONTROLLER_DRAIN_LIMIT 64
+
 static bool
 socket_path_valid(const char *path, const char *runtime_dir, size_t path_capacity)
 {
@@ -211,7 +213,13 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 	}
 }
 
-static void
+enum receive_result {
+	RECEIVE_RESULT_RECEIVED,
+	RECEIVE_RESULT_EMPTY,
+	RECEIVE_RESULT_CLOSED,
+};
+
+static enum receive_result
 receive_message(struct cg_surface_controller *controller)
 {
 	uint8_t bytes[CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE];
@@ -220,27 +228,29 @@ receive_message(struct cg_surface_controller *controller)
 
 	if (size == 0) {
 		disconnect_client(controller);
-		return;
+		return RECEIVE_RESULT_CLOSED;
 	}
 	if (size < 0) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			controller->receive_errors++;
 			disconnect_client(controller);
+			return RECEIVE_RESULT_CLOSED;
 		}
-		return;
+		return RECEIVE_RESULT_EMPTY;
 	}
 	if ((size_t) size > sizeof(bytes)) {
 		controller->last_parse_result = CG_SURFACE_CONTROL_PARSE_INVALID_SIZE;
 		controller->rejected_messages++;
-		return;
+		return RECEIVE_RESULT_RECEIVED;
 	}
 
 	controller->last_parse_result = cg_surface_control_parse(bytes, (size_t) size, &message);
 	if (controller->last_parse_result != CG_SURFACE_CONTROL_PARSE_OK) {
 		controller->rejected_messages++;
-		return;
+		return RECEIVE_RESULT_RECEIVED;
 	}
 	apply_message(controller, &message);
+	return RECEIVE_RESULT_RECEIVED;
 }
 
 static int
@@ -252,7 +262,11 @@ handle_client(int fd, uint32_t mask, void *data)
 		return 0;
 	}
 	if (mask & WL_EVENT_READABLE) {
-		receive_message(controller);
+		for (size_t index = 0; index < CG_SURFACE_CONTROLLER_DRAIN_LIMIT; index++) {
+			if (controller->client_fd < 0 || receive_message(controller) != RECEIVE_RESULT_RECEIVED) {
+				break;
+			}
+		}
 	}
 	if (controller->client_fd >= 0 && (mask & (WL_EVENT_HANGUP | WL_EVENT_ERROR))) {
 		disconnect_client(controller);
