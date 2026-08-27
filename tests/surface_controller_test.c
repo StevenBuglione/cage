@@ -311,6 +311,19 @@ main(void)
 	assert(cg_surface_controller_notify_first_frame(&controller, &first_frame));
 	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_FIRST_FRAME_SIZE);
 	assert(memcmp(bytes, "LSC1\x01\x86\x00\x28", 8) == 0);
+	const struct cg_surface_control_presentation_pending pending = {
+		.scene_id = 7,
+		.surface_id = 102,
+		.revision = 1,
+		.actual_width = 1000,
+		.actual_height = 700,
+		.expected_width = 1200,
+		.expected_height = 800,
+		.reason = CG_SURFACE_CONTROL_PRESENTATION_PENDING_BUFFER_SIZE_MISMATCH,
+	};
+	assert(cg_surface_controller_notify_presentation_pending(&controller, &pending));
+	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x87\x00\x38", 8) == 0);
 
 	const struct cg_surface_control_destroy_scene destroy_scene = {.scene_id = 7};
 	assert(cg_surface_control_encode_destroy_scene(&destroy_scene, bytes, sizeof(bytes), &size));

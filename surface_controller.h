@@ -67,6 +67,8 @@ bool cg_surface_controller_notify_associated(struct cg_surface_controller *contr
 					     const struct cg_surface_identity *identity);
 bool cg_surface_controller_notify_first_frame(struct cg_surface_controller *controller,
 					      const struct cg_surface_control_first_frame *event);
+bool cg_surface_controller_notify_presentation_pending(
+	struct cg_surface_controller *controller, const struct cg_surface_control_presentation_pending *event);
 bool cg_surface_controller_notify_resize(struct cg_surface_controller *controller, const struct cg_resize_event *event);
 bool cg_surface_controller_notify_output_changed(struct cg_surface_controller *controller,
 						 const struct cg_surface_control_resize_output *event);

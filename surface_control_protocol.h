@@ -17,6 +17,7 @@
 #define CG_SURFACE_CONTROL_REGISTERED_SIZE 40
 #define CG_SURFACE_CONTROL_ASSOCIATED_SIZE 40
 #define CG_SURFACE_CONTROL_FIRST_FRAME_SIZE 40
+#define CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE 56
 #define CG_SURFACE_CONTROL_CREATE_SCENE_SIZE 32
 #define CG_SURFACE_CONTROL_DESTROY_SCENE_SIZE 16
 #define CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE 32
@@ -45,6 +46,7 @@ enum cg_surface_control_message_type {
 	CG_SURFACE_CONTROL_RESIZE_CANCELLED = 0x84,
 	CG_SURFACE_CONTROL_OUTPUT_CHANGED = 0x85,
 	CG_SURFACE_CONTROL_FIRST_FRAME = 0x86,
+	CG_SURFACE_CONTROL_PRESENTATION_PENDING = 0x87,
 };
 
 enum cg_surface_control_parse_result {
@@ -88,6 +90,21 @@ struct cg_surface_control_first_frame {
 	uint32_t height;
 };
 
+enum cg_surface_control_presentation_pending_reason {
+	CG_SURFACE_CONTROL_PRESENTATION_PENDING_BUFFER_SIZE_MISMATCH = 1,
+};
+
+struct cg_surface_control_presentation_pending {
+	cg_scene_id scene_id;
+	cg_surface_id surface_id;
+	cg_scene_revision revision;
+	uint32_t actual_width;
+	uint32_t actual_height;
+	uint32_t expected_width;
+	uint32_t expected_height;
+	enum cg_surface_control_presentation_pending_reason reason;
+};
+
 struct cg_surface_control_message {
 	enum cg_surface_control_message_type type;
 	union {
@@ -123,6 +140,8 @@ bool cg_surface_control_encode_output_changed(const struct cg_surface_control_re
 					      size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_first_frame(const struct cg_surface_control_first_frame *event, uint8_t *bytes_out,
 					   size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_presentation_pending(const struct cg_surface_control_presentation_pending *event,
+						    uint8_t *bytes_out, size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
 					    size_t *size_out);
 

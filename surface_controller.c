@@ -201,6 +201,7 @@ apply_message(struct cg_surface_controller *controller, const struct cg_surface_
 	case CG_SURFACE_CONTROL_RESIZE_CANCELLED:
 	case CG_SURFACE_CONTROL_OUTPUT_CHANGED:
 	case CG_SURFACE_CONTROL_FIRST_FRAME:
+	case CG_SURFACE_CONTROL_PRESENTATION_PENDING:
 		break;
 	}
 	if (applied) {
@@ -403,6 +404,27 @@ cg_surface_controller_notify_first_frame(struct cg_surface_controller *controlle
 
 	if (!controller || !controller->accepting || controller->client_fd < 0 ||
 	    !cg_surface_control_encode_first_frame(event, bytes, sizeof(bytes), &size)) {
+		return false;
+	}
+	sent = send(controller->client_fd, bytes, size, MSG_NOSIGNAL);
+	if (sent == (ssize_t) size) {
+		return true;
+	}
+	controller->receive_errors++;
+	disconnect_client(controller);
+	return false;
+}
+
+bool
+cg_surface_controller_notify_presentation_pending(
+	struct cg_surface_controller *controller, const struct cg_surface_control_presentation_pending *event)
+{
+	uint8_t bytes[CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE];
+	size_t size;
+	ssize_t sent;
+
+	if (!controller || !controller->accepting || controller->client_fd < 0 ||
+	    !cg_surface_control_encode_presentation_pending(event, bytes, sizeof(bytes), &size)) {
 		return false;
 	}
 	sent = send(controller->client_fd, bytes, size, MSG_NOSIGNAL);

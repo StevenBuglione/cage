@@ -447,6 +447,31 @@ cg_surface_control_encode_first_frame(const struct cg_surface_control_first_fram
 }
 
 bool
+cg_surface_control_encode_presentation_pending(const struct cg_surface_control_presentation_pending *event,
+					       uint8_t *bytes_out, size_t capacity, size_t *size_out)
+{
+	if (!event || event->scene_id == 0 || event->surface_id == 0 || event->revision == 0 ||
+	    event->expected_width == 0 || event->expected_height == 0 ||
+	    event->reason != CG_SURFACE_CONTROL_PRESENTATION_PENDING_BUFFER_SIZE_MISMATCH || !bytes_out ||
+	    capacity < CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE || !size_out) {
+		return false;
+	}
+	memset(bytes_out, 0, CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE);
+	write_header(bytes_out, CG_SURFACE_CONTROL_PRESENTATION_PENDING,
+		     CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE);
+	write_u64(bytes_out + 8, event->scene_id);
+	write_u64(bytes_out + 16, event->surface_id);
+	write_u64(bytes_out + 24, event->revision);
+	write_u32(bytes_out + 32, event->actual_width);
+	write_u32(bytes_out + 36, event->actual_height);
+	write_u32(bytes_out + 40, event->expected_width);
+	write_u32(bytes_out + 44, event->expected_height);
+	write_u32(bytes_out + 48, (uint32_t) event->reason);
+	*size_out = CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE;
+	return true;
+}
+
+bool
 cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
 				       size_t *size_out)
 {

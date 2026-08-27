@@ -260,12 +260,26 @@ view_update_first_frame(struct cg_view *view)
 	if (!decision.ready) {
 		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 		if (decision.send_wakeup) {
+			const struct cg_surface_control_presentation_pending pending = {
+				.scene_id = view->surface_policy.identity.scene_id,
+				.surface_id = view->surface_policy.identity.surface_id,
+				.revision = record->snapshot.revision,
+				.actual_width = (uint32_t) view->wlr_surface->current.width,
+				.actual_height = (uint32_t) view->wlr_surface->current.height,
+				.expected_width = (uint32_t) state.bounds.width,
+				.expected_height = (uint32_t) state.bounds.height,
+				.reason = CG_SURFACE_CONTROL_PRESENTATION_PENDING_BUFFER_SIZE_MISMATCH,
+			};
 			struct timespec now;
 			wlr_log(WLR_DEBUG,
 				"Framework surface awaiting exact buffer (revision=%" PRIu64
 				", actual=%dx%d, expected=%dx%d)",
 				record->snapshot.revision, view->wlr_surface->current.width,
 				view->wlr_surface->current.height, state.bounds.width, state.bounds.height);
+			if (!cg_surface_controller_notify_presentation_pending(&view->server->surface_controller, &pending)) {
+				cg_surface_frame_gate_reset(&view->scene_frame_gate);
+				return;
+			}
 			if (clock_gettime(CLOCK_MONOTONIC, &now) == 0) {
 				wlr_surface_send_frame_done(view->wlr_surface, &now);
 			}

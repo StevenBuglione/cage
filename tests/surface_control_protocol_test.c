@@ -121,6 +121,36 @@ test_first_frame_golden_vector(void)
 }
 
 static void
+test_presentation_pending_golden_vector(void)
+{
+	const struct cg_surface_control_presentation_pending event = {
+		.scene_id = 0x0102030405060708ULL,
+		.surface_id = 0x1112131415161718ULL,
+		.revision = 0x2122232425262728ULL,
+		.actual_width = 1280,
+		.actual_height = 720,
+		.expected_width = 1440,
+		.expected_height = 900,
+		.reason = CG_SURFACE_CONTROL_PRESENTATION_PENDING_BUFFER_SIZE_MISMATCH,
+	};
+	uint8_t bytes[CG_SURFACE_CONTROL_MAX_MESSAGE_SIZE];
+	size_t size = 0;
+
+	assert(cg_surface_control_encode_presentation_pending(&event, bytes, sizeof(bytes), &size));
+	assert(size == CG_SURFACE_CONTROL_PRESENTATION_PENDING_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x87\x00\x38", 8) == 0);
+	assert(memcmp(bytes + 8, "\x01\x02\x03\x04\x05\x06\x07\x08", 8) == 0);
+	assert(memcmp(bytes + 16, "\x11\x12\x13\x14\x15\x16\x17\x18", 8) == 0);
+	assert(memcmp(bytes + 24, "\x21\x22\x23\x24\x25\x26\x27\x28", 8) == 0);
+	assert(bytes[34] == 5 && bytes[35] == 0);
+	assert(bytes[38] == 2 && bytes[39] == 208);
+	assert(bytes[42] == 5 && bytes[43] == 160);
+	assert(bytes[46] == 3 && bytes[47] == 132);
+	assert(bytes[51] == CG_SURFACE_CONTROL_PRESENTATION_PENDING_BUFFER_SIZE_MISMATCH);
+	assert(bytes[52] == 0 && bytes[53] == 0 && bytes[54] == 0 && bytes[55] == 0);
+}
+
+static void
 test_registered_golden_vector(void)
 {
 	struct cg_surface_registration_request request = registration();
@@ -405,6 +435,7 @@ main(void)
 	test_unregister_and_reset();
 	test_associated_golden_vector();
 	test_first_frame_golden_vector();
+	test_presentation_pending_golden_vector();
 	test_registered_golden_vector();
 	test_scene_control_round_trip();
 	test_scene_message_rejection_and_capacity();
