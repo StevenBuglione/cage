@@ -72,6 +72,8 @@ struct cg_scene_snapshot {
 	cg_scene_id scene_id;
 	cg_output_id output_id;
 	cg_scene_revision revision;
+	uint32_t snapshot_output_width;
+	uint32_t snapshot_output_height;
 	uint16_t surface_count;
 	uint16_t resize_boundary_count;
 	bool has_focused_surface;

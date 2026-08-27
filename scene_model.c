@@ -54,6 +54,8 @@ snapshot_equal(const struct cg_scene_snapshot *left, const struct cg_scene_snaps
 {
 	if (left->scene_id != right->scene_id || left->output_id != right->output_id ||
 	    left->revision != right->revision || left->surface_count != right->surface_count ||
+	    left->snapshot_output_width != right->snapshot_output_width ||
+	    left->snapshot_output_height != right->snapshot_output_height ||
 	    left->resize_boundary_count != right->resize_boundary_count ||
 	    left->has_focused_surface != right->has_focused_surface ||
 	    left->focused_surface_id != right->focused_surface_id) {
@@ -210,7 +212,9 @@ validate_snapshot(const struct cg_scene_record *record, const struct cg_surface_
 		  const struct cg_scene_snapshot *snapshot)
 {
 	if (!record || !registry || !snapshot || snapshot->scene_id == 0 || snapshot->output_id == 0 ||
-	    snapshot->revision == 0 || snapshot->surface_count > CG_SCENE_SURFACE_CAPACITY ||
+	    snapshot->revision == 0 || !output_size_valid(snapshot->snapshot_output_width,
+						    snapshot->snapshot_output_height) ||
+	    snapshot->surface_count > CG_SCENE_SURFACE_CAPACITY ||
 	    snapshot->resize_boundary_count > CG_SCENE_RESIZE_BOUNDARY_CAPACITY ||
 	    snapshot->scene_id != record->snapshot.scene_id || snapshot->output_id != record->snapshot.output_id ||
 	    (!snapshot->has_focused_surface && snapshot->focused_surface_id != 0)) {
@@ -313,8 +317,8 @@ cg_scene_model_apply(struct cg_scene_model *model, const struct cg_surface_regis
 		return result;
 	}
 	record->snapshot = *snapshot;
-	record->snapshot_output_width = record->output_width;
-	record->snapshot_output_height = record->output_height;
+	record->snapshot_output_width = snapshot->snapshot_output_width;
+	record->snapshot_output_height = snapshot->snapshot_output_height;
 	model->applied_snapshots++;
 	return CG_SCENE_OK;
 }

@@ -109,6 +109,7 @@ static bool
 scene_header_fields_valid(const struct cg_scene_snapshot *snapshot)
 {
 	return snapshot && snapshot->scene_id != 0 && snapshot->output_id != 0 && snapshot->revision != 0 &&
+	       snapshot->snapshot_output_width != 0 && snapshot->snapshot_output_height != 0 &&
 	       snapshot->surface_count <= CG_SCENE_SURFACE_CAPACITY &&
 	       snapshot->resize_boundary_count <= CG_SCENE_RESIZE_BOUNDARY_CAPACITY &&
 	       (snapshot->has_focused_surface ? snapshot->focused_surface_id != 0 : snapshot->focused_surface_id == 0);
@@ -227,6 +228,8 @@ cg_surface_control_parse(const uint8_t *bytes, size_t size, struct cg_surface_co
 		snapshot->resize_boundary_count = read_u16(bytes + 34);
 		snapshot->has_focused_surface = (bytes[36] & 1u) != 0;
 		snapshot->focused_surface_id = read_u64(bytes + 40);
+		snapshot->snapshot_output_width = read_u32(bytes + 48);
+		snapshot->snapshot_output_height = read_u32(bytes + 52);
 		if (!scene_header_fields_valid(snapshot) || scene_message_size(snapshot) != size) {
 			memset(message_out, 0, sizeof(*message_out));
 			return CG_SURFACE_CONTROL_PARSE_INVALID_FIELDS;
@@ -358,6 +361,8 @@ cg_surface_control_encode_apply_scene(const struct cg_scene_snapshot *snapshot, 
 	write_u16(bytes_out + 34, snapshot->resize_boundary_count);
 	bytes_out[36] = snapshot->has_focused_surface ? 1 : 0;
 	write_u64(bytes_out + 40, snapshot->focused_surface_id);
+	write_u32(bytes_out + 48, snapshot->snapshot_output_width);
+	write_u32(bytes_out + 52, snapshot->snapshot_output_height);
 	for (uint16_t index = 0; index < snapshot->surface_count; index++) {
 		const struct cg_scene_surface_state *state = &snapshot->surfaces[index];
 		if ((state->output_anchor_mask & ~CG_SCENE_OUTPUT_ANCHOR_MASK) != 0) {

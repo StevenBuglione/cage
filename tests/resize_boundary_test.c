@@ -26,6 +26,8 @@ setup(struct cg_scene_model *model, struct cg_surface_registry *registry, enum c
 		.scene_id = 7,
 		.output_id = 11,
 		.revision = 1,
+		.snapshot_output_width = 1000,
+		.snapshot_output_height = 700,
 		.surface_count = 1,
 		.resize_boundary_count = 1,
 	};

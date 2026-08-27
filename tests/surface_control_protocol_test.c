@@ -173,6 +173,8 @@ scene_snapshot(void)
 		.scene_id = 0x0102030405060708ULL,
 		.output_id = 0x1112131415161718ULL,
 		.revision = 0x2122232425262728ULL,
+		.snapshot_output_width = 1440,
+		.snapshot_output_height = 900,
 		.surface_count = 2,
 		.resize_boundary_count = 1,
 		.has_focused_surface = true,
@@ -257,12 +259,14 @@ test_scene_control_round_trip(void)
 	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));
 	assert(size == CG_SURFACE_CONTROL_APPLY_SCENE_HEADER_SIZE + 2 * CG_SURFACE_CONTROL_SURFACE_STATE_SIZE +
 			       CG_SURFACE_CONTROL_RESIZE_BOUNDARY_SIZE);
-	assert(memcmp(bytes, "LSC1\x01\x06\x00\xd8", 8) == 0);
+	assert(memcmp(bytes, "LSC1\x01\x06\x00\xe0", 8) == 0);
 	assert(cg_surface_control_parse(bytes, size, &parsed) == CG_SURFACE_CONTROL_PARSE_OK);
 	assert(parsed.type == CG_SURFACE_CONTROL_APPLY_SCENE);
 	assert(parsed.scene_snapshot.scene_id == snapshot.scene_id);
 	assert(parsed.scene_snapshot.output_id == snapshot.output_id);
 	assert(parsed.scene_snapshot.revision == snapshot.revision);
+	assert(parsed.scene_snapshot.snapshot_output_width == 1440);
+	assert(parsed.scene_snapshot.snapshot_output_height == 900);
 	assert(parsed.scene_snapshot.surface_count == 2);
 	assert(parsed.scene_snapshot.resize_boundary_count == 1);
 	assert(parsed.scene_snapshot.surfaces[0].bounds.x == -10);
@@ -308,6 +312,8 @@ test_scene_message_rejection_and_capacity(void)
 	snapshot.scene_id = 7;
 	snapshot.output_id = 11;
 	snapshot.revision = 1;
+	snapshot.snapshot_output_width = 1440;
+	snapshot.snapshot_output_height = 900;
 	snapshot.surface_count = CG_SCENE_SURFACE_CAPACITY;
 	snapshot.resize_boundary_count = CG_SCENE_RESIZE_BOUNDARY_CAPACITY;
 	assert(cg_surface_control_encode_apply_scene(&snapshot, bytes, sizeof(bytes), &size));

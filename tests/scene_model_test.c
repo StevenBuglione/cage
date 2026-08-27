@@ -56,6 +56,8 @@ base_snapshot(void)
 		.scene_id = 7,
 		.output_id = 11,
 		.revision = 1,
+		.snapshot_output_width = 1000,
+		.snapshot_output_height = 700,
 		.surface_count = 2,
 		.has_focused_surface = true,
 		.focused_surface_id = 200,
@@ -303,6 +305,23 @@ test_output_anchors_project_without_mutating_revision(void)
 	assert(cg_scene_model_apply(&model, &registry, &snapshot) == CG_SCENE_INVALID);
 }
 
+static void
+test_output_anchors_use_the_transaction_basis(void)
+{
+	struct cg_scene_model model;
+	struct cg_surface_registry registry;
+	struct cg_scene_snapshot snapshot = base_snapshot();
+	struct cg_scene_surface_state layout;
+
+	setup(&model, &registry);
+	snapshot.surfaces[0].output_anchor_mask = CG_SCENE_OUTPUT_ANCHOR_MASK;
+	assert(cg_scene_model_resize_output(&model, 7, 1920, 1080) == CG_SCENE_OK);
+	assert(cg_scene_model_apply(&model, &registry, &snapshot) == CG_SCENE_OK);
+	assert(cg_scene_model_resize_output(&model, 7, 2560, 1440) == CG_SCENE_OK);
+	assert(cg_scene_model_layout_surface(&model, 7, 100, &layout));
+	assert(layout.bounds.width == 2560 && layout.bounds.height == 1440);
+}
+
 int
 main(void)
 {
@@ -313,5 +332,6 @@ main(void)
 	test_clip_z_order_visibility_and_association();
 	test_output_resize_and_reconnect_snapshot();
 	test_output_anchors_project_without_mutating_revision();
+	test_output_anchors_use_the_transaction_basis();
 	return 0;
 }

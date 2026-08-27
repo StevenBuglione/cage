@@ -257,6 +257,8 @@ main(void)
 		.scene_id = 7,
 		.output_id = 11,
 		.revision = 1,
+		.snapshot_output_width = 1000,
+		.snapshot_output_height = 700,
 		.surface_count = 1,
 		.has_focused_surface = true,
 		.focused_surface_id = 102,
