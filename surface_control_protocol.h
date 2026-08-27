@@ -16,6 +16,7 @@
 #define CG_SURFACE_CONTROL_RESET_SIZE 8
 #define CG_SURFACE_CONTROL_REGISTERED_SIZE 40
 #define CG_SURFACE_CONTROL_ASSOCIATED_SIZE 40
+#define CG_SURFACE_CONTROL_FIRST_FRAME_SIZE 40
 #define CG_SURFACE_CONTROL_CREATE_SCENE_SIZE 32
 #define CG_SURFACE_CONTROL_DESTROY_SCENE_SIZE 16
 #define CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE 32
@@ -43,6 +44,7 @@ enum cg_surface_control_message_type {
 	CG_SURFACE_CONTROL_BOUNDS_COMMITTED = 0x83,
 	CG_SURFACE_CONTROL_RESIZE_CANCELLED = 0x84,
 	CG_SURFACE_CONTROL_OUTPUT_CHANGED = 0x85,
+	CG_SURFACE_CONTROL_FIRST_FRAME = 0x86,
 };
 
 enum cg_surface_control_parse_result {
@@ -78,6 +80,14 @@ struct cg_surface_control_resize_output {
 	uint32_t output_height;
 };
 
+struct cg_surface_control_first_frame {
+	cg_scene_id scene_id;
+	cg_surface_id surface_id;
+	cg_scene_revision revision;
+	uint32_t width;
+	uint32_t height;
+};
+
 struct cg_surface_control_message {
 	enum cg_surface_control_message_type type;
 	union {
@@ -111,6 +121,8 @@ bool cg_surface_control_encode_resize_output(const struct cg_surface_control_res
 					     size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_output_changed(const struct cg_surface_control_resize_output *event, uint8_t *bytes_out,
 					      size_t capacity, size_t *size_out);
+bool cg_surface_control_encode_first_frame(const struct cg_surface_control_first_frame *event, uint8_t *bytes_out,
+					   size_t capacity, size_t *size_out);
 bool cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
 					    size_t *size_out);
 

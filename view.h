@@ -37,11 +37,13 @@ struct cg_view {
 	bool scene_visible;
 	bool scene_accepts_input;
 	int32_t scene_z_index;
+	cg_scene_revision scene_first_frame_revision;
 	const struct cg_view_impl *impl;
 
 	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel_handle;
 	struct wl_listener request_activate;
 	struct wl_listener request_close;
+	struct wl_listener surface_commit;
 };
 
 struct cg_view_impl {

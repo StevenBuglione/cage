@@ -301,6 +301,16 @@ main(void)
 	assert(cg_surface_controller_notify_output_changed(&controller, &resize_output));
 	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_RESIZE_OUTPUT_SIZE);
 	assert(memcmp(bytes, "LSC1\x01\x85\x00\x20", 8) == 0);
+	const struct cg_surface_control_first_frame first_frame = {
+		.scene_id = 7,
+		.surface_id = 102,
+		.revision = 1,
+		.width = 1000,
+		.height = 700,
+	};
+	assert(cg_surface_controller_notify_first_frame(&controller, &first_frame));
+	assert(recv(client, bytes, sizeof(bytes), 0) == CG_SURFACE_CONTROL_FIRST_FRAME_SIZE);
+	assert(memcmp(bytes, "LSC1\x01\x86\x00\x28", 8) == 0);
 
 	const struct cg_surface_control_destroy_scene destroy_scene = {.scene_id = 7};
 	assert(cg_surface_control_encode_destroy_scene(&destroy_scene, bytes, sizeof(bytes), &size));

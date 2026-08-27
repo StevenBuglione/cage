@@ -428,6 +428,25 @@ cg_surface_control_encode_output_changed(const struct cg_surface_control_resize_
 }
 
 bool
+cg_surface_control_encode_first_frame(const struct cg_surface_control_first_frame *event, uint8_t *bytes_out,
+				      size_t capacity, size_t *size_out)
+{
+	if (!event || event->scene_id == 0 || event->surface_id == 0 || event->revision == 0 || event->width == 0 ||
+	    event->height == 0 || !bytes_out || capacity < CG_SURFACE_CONTROL_FIRST_FRAME_SIZE || !size_out) {
+		return false;
+	}
+	memset(bytes_out, 0, CG_SURFACE_CONTROL_FIRST_FRAME_SIZE);
+	write_header(bytes_out, CG_SURFACE_CONTROL_FIRST_FRAME, CG_SURFACE_CONTROL_FIRST_FRAME_SIZE);
+	write_u64(bytes_out + 8, event->scene_id);
+	write_u64(bytes_out + 16, event->surface_id);
+	write_u64(bytes_out + 24, event->revision);
+	write_u32(bytes_out + 32, event->width);
+	write_u32(bytes_out + 36, event->height);
+	*size_out = CG_SURFACE_CONTROL_FIRST_FRAME_SIZE;
+	return true;
+}
+
+bool
 cg_surface_control_encode_resize_event(const struct cg_resize_event *event, uint8_t *bytes_out, size_t capacity,
 				       size_t *size_out)
 {

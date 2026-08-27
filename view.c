@@ -69,7 +69,7 @@ view_accepts_input(const struct cg_view *view)
 		return true;
 	}
 	return view->surface_policy.state == CG_SURFACE_VIEW_ASSOCIATED && view->scene_present && view->scene_visible &&
-	       view->scene_accepts_input;
+	       view->scene_accepts_input && view->scene_first_frame_revision != 0;
 }
 
 static void
@@ -222,6 +222,7 @@ view_hide_scene_state(struct cg_view *view)
 	view->scene_visible = false;
 	view->scene_accepts_input = false;
 	view->scene_z_index = 0;
+	view->scene_first_frame_revision = 0;
 	if (view->scene_tree) {
 		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 		wlr_scene_subsurface_tree_set_clip(&view->scene_tree->node, NULL);
@@ -229,6 +230,53 @@ view_hide_scene_state(struct cg_view *view)
 	if (view->server->seat) {
 		seat_clear_focus(view->server->seat, view);
 	}
+}
+
+static void
+view_update_first_frame(struct cg_view *view)
+{
+	struct cg_scene_surface_state state;
+	const struct cg_scene_record *record;
+	bool ready;
+
+	if (!view || !view->scene_tree || !view->wlr_surface || !view->scene_present ||
+	    view->surface_policy.state != CG_SURFACE_VIEW_ASSOCIATED) {
+		return;
+	}
+	record = cg_scene_model_find(&view->server->scene_model, view->surface_policy.identity.scene_id);
+	ready = record &&
+		cg_scene_model_layout_surface(&view->server->scene_model, view->surface_policy.identity.scene_id,
+					      view->surface_policy.identity.surface_id, &state) &&
+		view->wlr_surface->current.width == state.bounds.width &&
+		view->wlr_surface->current.height == state.bounds.height;
+	if (!ready) {
+		view->scene_first_frame_revision = 0;
+		wlr_scene_node_set_enabled(&view->scene_tree->node, false);
+		return;
+	}
+	if (view->scene_first_frame_revision != record->snapshot.revision) {
+		const struct cg_surface_control_first_frame event = {
+			.scene_id = view->surface_policy.identity.scene_id,
+			.surface_id = view->surface_policy.identity.surface_id,
+			.revision = record->snapshot.revision,
+			.width = (uint32_t) state.bounds.width,
+			.height = (uint32_t) state.bounds.height,
+		};
+		if (!cg_surface_controller_notify_first_frame(&view->server->surface_controller, &event)) {
+			wlr_scene_node_set_enabled(&view->scene_tree->node, false);
+			return;
+		}
+		view->scene_first_frame_revision = record->snapshot.revision;
+	}
+	wlr_scene_node_set_enabled(&view->scene_tree->node, view->scene_visible);
+}
+
+static void
+handle_surface_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_view *view = wl_container_of(listener, view, surface_commit);
+	(void) data;
+	view_update_first_frame(view);
 }
 
 void
@@ -268,7 +316,7 @@ view_apply_scene_state(struct cg_view *view)
 	view->scene_z_index = state->z_index;
 	view_maximize(view, &bounds);
 	wlr_scene_subsurface_tree_set_clip(&view->scene_tree->node, &clip);
-	wlr_scene_node_set_enabled(&view->scene_tree->node, true);
+	view_update_first_frame(view);
 	/* A newly associated surface can arrive after the output's last frame
 	 * event. Explicitly request the next event so the scene is committed before
 	 * the host's first resize; wlroots coalesces repeated requests naturally. */
@@ -492,9 +540,11 @@ view_unmap(struct cg_view *view)
 	view->foreign_toplevel_handle = NULL;
 
 	wlr_scene_node_destroy(&view->scene_tree->node);
+	wl_list_remove(&view->surface_commit.link);
 
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
+	view->scene_first_frame_revision = 0;
 }
 
 void
@@ -528,6 +578,8 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 
 	view->wlr_surface = surface;
 	surface->data = view;
+	view->surface_commit.notify = handle_surface_commit;
+	wl_signal_add(&surface->events.commit, &view->surface_commit);
 	bool associated = view_associate_surface(view, surface);
 
 #if CAGE_HAS_XWAYLAND
